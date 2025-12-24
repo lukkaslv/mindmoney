@@ -12,6 +12,7 @@ export interface ProtocolStep {
   task: { ru: string; ka: string };
   method: { ru: string; ka: string };
   targetMetric: { ru: string; ka: string };
+  completed?: boolean;
 }
 
 export interface AnalysisResult {
@@ -31,80 +32,88 @@ export interface AnalysisResult {
 
 const TASKS_DB: Record<string, any[]> = {
   SANITATION: [
-    {
-      task: { ru: "Ликвидация утечек", ka: "გაჟონვის ლიკვიდაცია" },
-      method: { ru: "Отписаться от 5 ненужных рассылок и 1 токсичного блогера сегодня.", ka: "დღესვე გამოიწერეთ 5 არასაჭირო გზავნილი და 1 ტოქსიკური ბლოგერი." },
-      targetMetric: { ru: "Снижение шума (Entropy) -5%", ka: "ხმაურის შემცირება -5%" }
-    },
-    {
-      task: { ru: "Ревизия границ", ka: "საზღვრების რევიზია" },
-      method: { ru: "Сказать 'нет' одной просьбе, которая нарушает ваш комфорт.", ka: "უთხარით 'არა' ერთ თხოვნას, რომელიც არღვევს თქვენს კომფორტს." },
-      targetMetric: { ru: "Рост Агентности +3%", ka: "აგენტურობის ზრდა +3%" }
-    }
+    { task: { ru: "Ликвидация утечек", ka: "გაჟონვის ლიკვიდაცია" }, method: { ru: "Отписаться от 5 ненужных рассылок сегодня.", ka: "დღესვე გამოიწერეთ 5 არასაჭირო გზავნილი." }, targetMetric: { ru: "Entropy -5%", ka: "ენტროპია -5%" } },
+    { task: { ru: "Телесный сброс", ka: "სხეულებრივი განტვირთვა" }, method: { ru: "10 минут прогрессивной мышечной релаксации.", ka: "10 წუთი პროგრესული კუნთოვანი რელაქსაცია." }, targetMetric: { ru: "Sync +10%", ka: "სინქრონი +10%" } }
   ],
   STABILIZATION: [
-    {
-      task: { ru: "Фиксация прибыли", ka: "მოგების ფიქსაცია" },
-      method: { ru: "Отложить 10% от любого прихода в 'Фонд Устойчивости'.", ka: "გადადეთ ნებისმიერი შემოსავლის 10% 'მდგრადობის ფონდში'." },
-      targetMetric: { ru: "Рост Целостности +8%", ka: "მთლიანობის ზრდა +8%" }
-    }
+    { task: { ru: "Граница ресурсов", ka: "რესურსების საზღვარი" }, method: { ru: "Зафиксировать минимальный несгораемый остаток на счету.", ka: "დააფიქსირეთ ანგარიშზე მინიმალური ხელშეუხებელი ნაშთი." }, targetMetric: { ru: "Foundation +7%", ka: "ფუნდამენტი +7%" } }
   ],
   EXPANSION: [
-    {
-      task: { ru: "Инвестиция в масштаб", ka: "ინვესტიცია მასშტაბში" },
-      method: { ru: "Купить обучение или инструмент, который ускорит ваш результат в 2 раза.", ka: "შეიძინეთ ტრენინგი ან ინსტრუმენტი, რომელიც თქვენს შედეგს 2-ჯერ დააჩქარებს." },
-      targetMetric: { ru: "Рост Емкости +15%", ka: "ტევადობის ზრდა +15%" }
-    }
+    { task: { ru: "Масштаб влияния", ka: "გავლენის მასშტაბი" }, method: { ru: "Публичное заявление о своих целях в соцсетях.", ka: "თქვენი მიზნების საჯარო განცხადება სოციალურ ქსელებში." }, targetMetric: { ru: "Capacity +15%", ka: "ტევადობა +15%" } }
   ]
 };
 
 export function calculateGenesisCore(history: any[]): AnalysisResult {
   let f = 50, a = 50, r = 50, e = 15;
   let syncScore = 100;
+  let latencyPenalties = 0;
   const bugs: string[] = [];
 
   const weights: Record<string, any> = {
-    'fear_of_punishment': { f: -15, a: -10, r: -5, e: 25, syncMap: ['s1', 's4'] },
-    'impulse_spend': { f: -10, a: 5, r: 15, e: 20, syncMap: ['s2', 's3'] },
-    'money_is_tool': { f: 5, a: 25, r: 20, e: -10, syncMap: ['s2'] },
-    'self_permission': { f: 0, a: 15, r: 35, e: -15, syncMap: ['s2'] },
-    'imposter_syndrome': { f: -5, a: -30, r: -15, e: 25, syncMap: ['s1', 's4'] },
-    'scarcity_mindset': { f: -25, a: -10, r: -15, e: 30, syncMap: ['s1'] },
-    'family_loyalty': { f: -30, a: -5, r: -10, e: 20, syncMap: ['s1', 's4'] },
-    'debt_trap': { f: -5, a: -25, r: 10, e: 25, syncMap: ['s1', 's4'] },
-    'betrayal_trauma': { f: -10, a: -10, r: 15, e: 35, syncMap: ['s3', 's4'] }
+    'fear_of_punishment': { f: -12, a: -8, r: -5, e: 20 },
+    'impulse_spend': { f: -8, a: 5, r: 12, e: 18 },
+    'money_is_tool': { f: 5, a: 20, r: 18, e: -8 },
+    'self_permission': { f: 0, a: 12, r: 30, e: -12 },
+    'imposter_syndrome': { f: -5, a: -25, r: -12, e: 22 },
+    'scarcity_mindset': { f: -20, a: -8, r: -12, e: 25 },
+    'family_loyalty': { f: -25, a: -5, r: -8, e: 15 },
+    'debt_trap': { f: -5, a: -20, r: 8, e: 20 },
+    'betrayal_trauma': { f: -8, a: -8, r: 12, e: 30 }
   };
 
   history.forEach(h => {
-    const w = weights[h.beliefKey];
-    if (w) {
-      f = Math.max(5, Math.min(95, f + w.f));
-      a = Math.max(5, Math.min(95, a + w.a));
-      r = Math.max(5, Math.min(95, r + w.r));
-      e = Math.max(5, Math.min(95, e + w.e));
-
-      if (w.syncMap && !w.syncMap.includes(h.sensation)) {
-        syncScore -= 15;
-        bugs.push('body_mind_conflict');
-      }
-
-      if (w.e > 10 || w.f < -10 || w.a < -10) bugs.push(h.beliefKey);
+    const w = weights[h.beliefKey] || { f: 0, a: 0, r: 0, e: 5 };
+    
+    // LATENCY CONFLICT: Если думал > 5с, это сопротивление
+    if (h.latency > 5000) {
+      latencyPenalties += 1;
+      e += 3;
+      bugs.push('latency_resistance');
     }
+
+    f += w.f; a += w.a; r += w.r; e += w.e;
+
+    // NON-LINEAR LOGIC: Если фундамент слаб, ресурсы растят энтропию
+    if (f < 35 && w.r > 0) {
+      e += w.r * 0.8;
+      bugs.push('resource_toxicity');
+    }
+
+    // SYNC CHECK
+    const syncMap: Record<string, string[]> = {
+      's1': ['fear_of_punishment', 'imposter_syndrome', 'scarcity_mindset', 'family_loyalty'],
+      's2': ['self_permission', 'money_is_tool', 'capacity_expansion'],
+      's3': ['impulse_spend', 'social_conflict'],
+      's4': ['fear_of_punishment', 'betrayal_trauma', 'unconscious_fear']
+    };
+
+    if (syncMap[h.sensation] && !syncMap[h.sensation].includes(h.beliefKey)) {
+      syncScore -= 12;
+      bugs.push('body_mind_conflict');
+    }
+
+    if (w.e > 15 || w.f < -15) bugs.push(h.beliefKey);
   });
+
+  // Clamp values
+  f = Math.max(5, Math.min(95, f));
+  a = Math.max(5, Math.min(95, a));
+  r = Math.max(5, Math.min(95, r));
+  e = Math.max(5, Math.min(95, e));
 
   const integrity = Math.round(((f + a + r) / 3) * (1 - e / 200));
   const capacity = Math.round((f + r) / 2);
   const neuroSync = Math.max(0, syncScore);
-  const systemHealth = Math.round((integrity * capacity * (neuroSync / 100)) / (e + 1));
+  const systemHealth = Math.round((integrity * (neuroSync / 100)) / (Math.sqrt(e + 1) / 2));
 
   let phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION' = 'SANITATION';
-  if (e < 25 && integrity > 45) phase = 'STABILIZATION';
-  if (integrity > 70 && systemHealth > 50) phase = 'EXPANSION';
+  if (e < 30 && integrity > 40) phase = 'STABILIZATION';
+  if (integrity > 65 && neuroSync > 70) phase = 'EXPANSION';
 
   let status: AnalysisResult['status'] = 'OPTIMAL';
-  if (systemHealth < 15) status = 'CRITICAL';
-  else if (systemHealth < 35) status = 'UNSTABLE';
-  else if (e > 35) status = 'COMPENSATED';
+  if (systemHealth < 20) status = 'CRITICAL';
+  else if (systemHealth < 45) status = 'UNSTABLE';
+  else if (e > 40) status = 'COMPENSATED';
 
   const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
     const p = i < 2 ? 'SANITATION' : (phase === 'EXPANSION' ? 'EXPANSION' : 'STABILIZATION');
@@ -122,18 +131,13 @@ export function calculateGenesisCore(history: any[]): AnalysisResult {
 
   return {
     state: { foundation: f, agency: a, resource: r, entropy: e },
-    integrity,
-    capacity,
-    entropyScore: e,
-    neuroSync,
-    systemHealth,
-    phase,
+    integrity, capacity, entropyScore: e, neuroSync, systemHealth, phase,
     archetype: archs[status],
     roadmap,
     graphPoints: [
-      { x: 50, y: 50 - f / 2.2 },
-      { x: 50 + r / 2.2, y: 50 + r / 4 },
-      { x: 50 - a / 2.2, y: 50 + a / 4 }
+      { x: 50, y: 50 - f / 2.5 },
+      { x: 50 + r / 2.2, y: 50 + r / 3.5 },
+      { x: 50 - a / 2.2, y: 50 + a / 3.5 }
     ],
     status,
     bugs: [...new Set(bugs)]

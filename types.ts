@@ -11,12 +11,20 @@ export interface Scene {
   titleKey: string;
   descKey: string;
   choices: Choice[];
-  image?: string;
+  intensity: number; // 1-5: глубина влияния на систему
 }
 
 export interface GameHistoryItem {
   beliefKey: string;
   sensation: string;
+  latency: number; // Время раздумий в мс
+}
+
+export interface Snapshot {
+  timestamp: number;
+  completedNodes: number[];
+  globalProgress: number;
+  lastState: any;
 }
 
 export interface Node {
@@ -24,5 +32,5 @@ export interface Node {
   domain: 'foundation' | 'agency' | 'money' | 'social' | 'legacy';
   active: boolean;
   done: boolean;
-  linkedTo?: number[];
+  intensity: number;
 }

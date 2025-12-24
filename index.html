@@ -9,14 +9,23 @@
       // Безопасная инициализация process для браузера
       window.process = window.process || { env: {} };
       
-      // Отлов глобальных ошибок до загрузки React
-      window.onerror = function(msg, url, line) {
-        const errDiv = document.getElementById('critical-error');
-        if (errDiv) {
-          errDiv.style.display = 'block';
-          errDiv.innerHTML = '<b>Системная ошибка:</b> ' + msg + '<br><small>' + url + ':' + line + '</small>';
-        }
-      };
+      // Таймер "белого экрана"
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const root = document.getElementById('root');
+          if (root && root.innerHTML === '') {
+            root.innerHTML = `
+              <div style="padding: 40px 20px; text-align: center; font-family: sans-serif; background: #fcfdff; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="font-size: 50px; margin-bottom: 20px;">⏱️</div>
+                <h1 style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 10px;">Загрузка затянулась...</h1>
+                <p style="font-size: 14px; color: #64748b; margin-bottom: 30px; line-height: 1.5;">Если вы видите это сообщение, значит приложение не смогло запуститься. Обычно это лечится полной очисткой.</p>
+                <button onclick="localStorage.clear(); window.location.reload(true);" style="background: #6366f1; color: white; border: none; padding: 18px 30px; border-radius: 20px; font-weight: 800; cursor: pointer; width: 100%; max-width: 280px; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);">СБРОСИТЬ И ПЕРЕЗАГРУЗИТЬ</button>
+                <p style="font-size: 10px; color: #cbd5e1; margin-top: 20px; text-transform: uppercase; letter-spacing: 0.1em;">Diagnostic Mode Active</p>
+              </div>
+            `;
+          }
+        }, 4000);
+      });
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -71,6 +80,16 @@
         to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       }
 
+      .pulse-indigo {
+        animation: pulseIndigo 2s infinite;
+      }
+
+      @keyframes pulseIndigo {
+        0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+      }
+
       .audio-wave-bar {
         width: 4px;
         background: var(--primary);
@@ -102,11 +121,8 @@
       }
     }
     </script>
-    <!-- ЭТА СТРОКА БЫЛА ПРОПУЩЕНА И ЭТО ПРИЧИНА БЕЛОГО ЭКРАНА -->
-    <script type="module" src="./index.tsx"></script>
   </head>
   <body>
-    <div id="critical-error" style="display:none; position:fixed; top:0; left:0; right:0; background: #fee2e2; color: #991b1b; padding: 20px; font-family: monospace; z-index: 9999; font-size: 12px; border-bottom: 2px solid #ef4444;"></div>
     <div id="root"></div>
   </body>
 </html>

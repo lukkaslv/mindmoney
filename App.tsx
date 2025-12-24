@@ -19,11 +19,17 @@ const BOOKING_URL = "https://t.me/your_telegram_username";
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => {
-    return (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru';
+    try {
+      return (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru';
+    } catch (e) { return 'ru'; }
   });
   
   const t = translations[lang];
-  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('is_auth') === 'true');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    try {
+      return localStorage.getItem('is_auth') === 'true';
+    } catch (e) { return false; }
+  });
   const [passwordInput, setPasswordInput] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
@@ -49,6 +55,9 @@ const App: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // Проверка наличия API-ключа для диагностики
+  const [hasApiKey, setHasApiKey] = useState<boolean | 'checking'>('checking');
+
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -57,6 +66,10 @@ const App: React.FC = () => {
       tg.headerColor = '#fcfdff';
       tg.backgroundColor = '#fcfdff';
     }
+    
+    // Проверка ключа (только наличие, не значение)
+    const key = (typeof process !== 'undefined' && process.env?.API_KEY) || (window as any).process?.env?.API_KEY;
+    setHasApiKey(!!key);
   }, []);
 
   useEffect(() => {
@@ -86,7 +99,6 @@ const App: React.FC = () => {
     setIsTransitioning(true);
     setIntermediateFeedback(null);
     setSelectedChoiceId(null);
-    window.Telegram?.WebApp?.MainButton?.hide();
 
     setTimeout(async () => {
       if (!nextId || nextId === 'end') {
@@ -132,7 +144,7 @@ const App: React.FC = () => {
   const handleLogin = () => {
     if (passwordInput.toLowerCase().trim() === APP_PASSWORD) {
       setIsAuthenticated(true);
-      localStorage.setItem('is_auth', 'true');
+      try { localStorage.setItem('is_auth', 'true'); } catch (e) {}
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
     } else {
       window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
@@ -167,7 +179,10 @@ const App: React.FC = () => {
               {['ru', 'ka'].map((l) => (
                 <button 
                   key={l}
-                  onClick={() => setLang(l as any)} 
+                  onClick={() => {
+                    setLang(l as any);
+                    try { localStorage.setItem('app_lang', l); } catch (e) {}
+                  }} 
                   className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === l ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-400 border border-slate-100'}`}
                 >
                   {l}
@@ -188,9 +203,20 @@ const App: React.FC = () => {
             <button onClick={handleLogin} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all text-sm uppercase tracking-widest">
               {t.accessBtn}
             </button>
-            <p className="text-center text-[8px] font-bold text-slate-300 uppercase tracking-widest pt-4">
-              Version Connection Test: Active
-            </p>
+            
+            <div className="pt-8 text-center space-y-2">
+               <p className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                 System Status
+               </p>
+               <div className="flex justify-center gap-4">
+                 <span className={`text-[7px] font-bold uppercase p-1 px-2 rounded-md ${hasApiKey === true ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+                   AI Key: {hasApiKey === 'checking' ? '...' : (hasApiKey ? 'Found' : 'Missing')}
+                 </span>
+                 <span className="text-[7px] font-bold uppercase p-1 px-2 rounded-md bg-blue-50 text-blue-500">
+                   Build: v1.0.8-ULTRA
+                 </span>
+               </div>
+            </div>
           </div>
         </div>
       </Layout>
@@ -274,7 +300,7 @@ const App: React.FC = () => {
                 <button onClick={() => window.Telegram?.WebApp?.openLink(BOOKING_URL)} className="w-full py-6 bg-white border-2 border-indigo-50 text-indigo-600 rounded-[2rem] text-xs font-black uppercase tracking-widest shadow-sm active:bg-slate-50 transition-all">
                   📅 {t.bookSession}
                 </button>
-                <button onClick={() => window.location.reload()} className="w-full py-4 text-slate-300 text-[10px] font-bold uppercase tracking-widest hover:text-slate-400 transition-all">
+                <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="w-full py-4 text-slate-300 text-[10px] font-bold uppercase tracking-widest hover:text-slate-400 transition-all">
                   {t.restart}
                 </button>
               </div>
@@ -354,7 +380,7 @@ const App: React.FC = () => {
         <div className="scene-transition space-y-8">
           <div className="relative rounded-[3.5rem] overflow-hidden aspect-[4/5] shadow-2xl border-[6px] border-white">
             <img 
-              src={`https://picsum.photos/seed/${scene.id}_v7/800/1000`} 
+              src={`https://picsum.photos/seed/${scene.id}_v8/800/1000`} 
               alt="Scene" 
               className="object-cover w-full h-full" 
             />

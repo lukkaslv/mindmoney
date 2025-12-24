@@ -19,6 +19,50 @@ const getTranslation = (obj: any, path: string) => {
   return typeof result === 'string' ? result : path;
 };
 
+// Компонент Кристалла
+const IdentityCrystal: React.FC<{ points: { x: number; y: number }[], scores: any, labels: any }> = ({ points, scores, labels }) => {
+  const polyPoints = points.map(p => `${p.x},${p.y}`).join(' ');
+  
+  return (
+    <div className="relative w-full aspect-square flex items-center justify-center p-8 bg-slate-900/50 rounded-[3rem] border border-white/5">
+      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+        {/* Сетка */}
+        <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="0.1" strokeDasharray="1 2" opacity="0.2" />
+        <circle cx="50" cy="50" r="20" fill="none" stroke="white" strokeWidth="0.1" strokeDasharray="1 2" opacity="0.1" />
+        <line x1="50" y1="50" x2="50" y2="10" stroke="white" strokeWidth="0.1" opacity="0.2" />
+        <line x1="50" y1="50" x2="84.6" y2="70" stroke="white" strokeWidth="0.1" opacity="0.2" />
+        <line x1="50" y1="50" x2="15.4" y2="70" stroke="white" strokeWidth="0.1" opacity="0.2" />
+
+        {/* Форма кристалла */}
+        <polygon 
+          points={polyPoints} 
+          fill="url(#crystalGradient)" 
+          stroke="white" 
+          strokeWidth="0.5"
+          className="animate-in fade-in zoom-in duration-1000"
+        />
+        
+        {/* Точки на вершинах */}
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="white" className="animate-pulse" />
+        ))}
+
+        <defs>
+          <linearGradient id="crystalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.8" />
+          </linearGradient>
+        </defs>
+      </svg>
+      
+      {/* Метки параметров */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.safety}: {scores.safety}</div>
+      <div className="absolute bottom-10 right-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.permission}: {scores.permission}</div>
+      <div className="absolute bottom-10 left-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.ambition}: {scores.ambition}</div>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
@@ -64,19 +108,19 @@ const App: React.FC = () => {
         setAnalysisData(data);
         
         let step = 0;
+        const totalSteps = t.loadingSteps.length;
         const timer = setInterval(() => {
-          setLoadingStep(s => (s + 1) % t.loadingSteps.length);
+          setLoadingStep(s => (s + 1) % totalSteps);
           step++;
-          if (step >= t.loadingSteps.length * 2) {
+          if (step >= totalSteps * 2) {
             clearInterval(timer);
             setLoading(false);
             setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
           }
-        }, 700);
+        }, 800);
       } catch (e) {
-        console.error("Analysis Error:", e);
         setLoading(false);
-        window.Telegram?.WebApp?.showAlert?.("Error calculating feedback.");
+        window.Telegram?.WebApp?.showAlert?.("Error in analysis engine.");
       }
     } else {
       const nextId = intermediateFeedback.nextId;
@@ -124,19 +168,28 @@ const App: React.FC = () => {
     return (
       <Layout lang={lang} onLangChange={setLang}>
         <div className="space-y-10 pb-32 animate-in fade-in slide-in-from-bottom-20 duration-1000">
+          
+          <section className="space-y-6">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] px-4">{t.resultAnalysis}</h3>
+            <IdentityCrystal 
+              points={analysisData.crystalPoints} 
+              scores={{ safety: analysisData.scoreSafety, permission: analysisData.scorePermission, ambition: analysisData.scoreAmbition }} 
+              labels={t.statsLabels}
+            />
+          </section>
+
           <div className="game-card p-10 bg-slate-900 text-white shadow-3xl relative overflow-hidden">
             <div className="relative z-10 space-y-6">
               <div className="flex justify-between items-start">
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.resultArchetype}</span>
-                <span className="text-[10px] font-black opacity-30">LUKA LAB PRO</span>
+                <span className="text-[10px] font-black opacity-30">CORE ID: {analysisData.archetypeKey.toUpperCase()}</span>
               </div>
-              <h2 className="text-5xl font-[900] tracking-tighter leading-none italic">{(t as any).archetypes?.[analysisData.archetypeKey] || analysisData.archetypeKey}</h2>
+              <h2 className="text-4xl font-[900] tracking-tighter leading-none italic uppercase">{(t as any).archetypes?.[analysisData.archetypeKey]}</h2>
               <div className="pt-4 border-t border-white/10 flex flex-wrap gap-2">
                 <span className="px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase">{(t.scenarios as any)[analysisData.scenarioKey]}</span>
                 <span className="px-4 py-2 bg-white/10 rounded-full text-[9px] font-black uppercase">{(t.traps as any)[analysisData.trapKey]}</span>
               </div>
             </div>
-            <div className="absolute -bottom-10 -right-10 text-[12rem] opacity-[0.03] font-black rotate-12 select-none pointer-events-none">LUKA</div>
           </div>
 
           <section className="space-y-6">
@@ -146,8 +199,8 @@ const App: React.FC = () => {
                   <div key={i} className="game-card p-8 bg-white/40 border border-white hover:bg-white/70 transition-colors">
                      <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{getTranslation(t, m.sceneTitle)}</span>
                      <p className="text-xl font-medium text-slate-800 mt-2 italic leading-snug">"{m.thought}"</p>
-                     <div className="mt-6 p-5 bg-indigo-50 rounded-3xl border-l-4 border-indigo-400">
-                        <p className="text-sm font-bold text-indigo-900 leading-relaxed">{(t.confrontations as any)[m.confrontation]}</p>
+                     <div className="mt-6 p-5 bg-white/80 rounded-3xl border-l-4 border-indigo-600 shadow-sm">
+                        <p className="text-sm font-bold text-slate-900 leading-relaxed italic">{(t.confrontations as any)[m.confrontation]}</p>
                      </div>
                   </div>
                 ))}
@@ -168,7 +221,7 @@ const App: React.FC = () => {
                        <h4 className="text-xl font-[900] text-slate-900 uppercase tracking-tight">{(t.roadmapSteps as any)[step.label]}</h4>
                        <p className="text-slate-600 text-lg leading-relaxed">{(t.roadmapSteps as any)[step.action]}</p>
                        <div className="mt-6 pt-6 border-t border-slate-100">
-                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Практика:</span>
+                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Практическое задание:</span>
                           <p className="text-indigo-900 font-bold">{(t.roadmapSteps as any)[step.homework]}</p>
                        </div>
                     </div>
@@ -200,7 +253,10 @@ const App: React.FC = () => {
               <label className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] px-2">{t.bodyQuestion}</label>
               <div className="grid grid-cols-2 gap-4">
                 {Object.entries(t.bodySensations).map(([key, label]) => (
-                  <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-6 rounded-[2rem] text-[12px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-white border-white text-slate-500 hover:border-indigo-100'}`}>{label}</button>
+                  <button key={key} onClick={() => {
+                    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
+                    setIntermediateFeedback({...intermediateFeedback, bodySensation: label});
+                  }} className={`p-6 rounded-[2rem] text-[12px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-white border-white text-slate-500 hover:border-indigo-100'}`}>{label}</button>
                 ))}
               </div>
             </div>
@@ -225,15 +281,18 @@ const App: React.FC = () => {
       <div className="space-y-10 animate-in fade-in zoom-in duration-700">
         <div className="flex justify-between items-end px-4">
            <div className="space-y-2">
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] italic">Step {state.history.length + 1}</span>
+              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] italic">Stage {state.history.length + 1} / {totalScenes}</span>
               <h2 className="text-4xl font-[900] text-slate-800 uppercase tracking-tighter italic leading-none">{getTranslation(t, scene.titleKey)}</h2>
            </div>
-           <div className="w-16 h-16 rounded-full border-2 border-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-300">{Math.round(currentProgress)}%</div>
+           <div className="relative w-16 h-16 rounded-full border-4 border-indigo-50 flex items-center justify-center">
+              <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-pulse" style={{ clipPath: `inset(0 0 ${100-currentProgress}% 0)` }}></div>
+              <span className="text-[10px] font-black text-indigo-600">{Math.round(currentProgress)}%</span>
+           </div>
         </div>
 
         <div className="relative rounded-[4rem] overflow-hidden aspect-[4/5] shadow-4xl border-[10px] border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v5/900/1200`} alt="Scene" className="object-cover w-full h-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex items-end p-10">
+          <img src={`https://picsum.photos/seed/${scene.id}_v6/900/1200`} alt="Scene" className="object-cover w-full h-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/10 to-transparent flex items-end p-10">
             <p className="text-white text-2xl leading-relaxed font-medium drop-shadow-xl">{getTranslation(t, scene.descKey)}</p>
           </div>
         </div>

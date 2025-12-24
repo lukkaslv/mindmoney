@@ -20,19 +20,26 @@ export interface AnalysisResult {
     insight: string;
     confrontation: string;
   }[];
-  analysisTextKeys: string[];
-  defenseMechanisms: string[];
+  // Координаты для SVG кристалла (0-100)
+  crystalPoints: { x: number; y: number }[];
   roadmap: {
     title: string;
     steps: { label: string; action: string; homework: string }[];
   };
+  // Added missing fields to fix TypeScript error in getPsychologicalFeedback return value
+  analysisTextKeys: string[];
+  defenseMechanisms: string[];
 }
 
 const CONFRONTATIONS: Record<string, string> = {
   'fear_of_punishment_throat': 'confront_voice_block',
   'impulse_spend_warmth': 'confront_euphoria_trap',
   'money_is_danger_cold': 'confront_survival_chill',
-  'poverty_is_virtue_shoulders': 'confront_moral_burden'
+  'poverty_is_virtue_shoulders': 'confront_moral_burden',
+  'imposter_syndrome_chest': 'confront_imposter_pressure',
+  'hard_work_only_shoulders': 'confront_work_weight',
+  'capacity_expansion_warmth': 'confront_expansion_glow',
+  'family_loyalty_throat': 'confront_loyalty_strangle'
 };
 
 const TRAITS: Record<string, any> = {
@@ -58,22 +65,21 @@ const getLevel = (val: number): 'low' | 'mid' | 'high' => {
 
 export async function getPsychologicalFeedback(history: any[], scenes: any): Promise<AnalysisResult> {
   let safety = 50, permission = 50, ambition = 50;
-  let traits: string[] = [];
   let reflectionMirror: any[] = [];
   
   history.forEach(item => {
     const t = TRAITS[item.beliefKey];
     if (t) {
-      safety = Math.max(0, Math.min(100, safety + t.s));
-      permission = Math.max(0, Math.min(100, permission + t.p));
-      ambition = Math.max(0, Math.min(100, ambition + t.a));
-      traits.push(item.beliefKey);
+      safety = Math.max(10, Math.min(100, safety + t.s));
+      permission = Math.max(10, Math.min(100, permission + t.p));
+      ambition = Math.max(10, Math.min(100, ambition + t.a));
       
       const s = item.bodySensation || "";
       const sKey = (s.includes('горле') || s.includes('ყელში')) ? 'throat' :
                    (s.includes('тепла') || s.includes('სითბოს')) ? 'warmth' :
                    (s.includes('Холод') || s.includes('სიცივე')) ? 'cold' :
-                   (s.includes('плечах') || s.includes('მხრებზე')) ? 'shoulders' : 'none';
+                   (s.includes('плечах') || s.includes('მხრებზე')) ? 'shoulders' :
+                   (s.includes('Давление') || s.includes('ზეწოლა')) ? 'chest' : 'none';
 
       const confKey = `${item.beliefKey}_${sKey}`;
 
@@ -87,6 +93,15 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
     }
   });
 
+  // Расчет точек кристалла (Radar Chart Geometry)
+  // 3 оси: Safety (Top), Permission (Bottom Right), Ambition (Bottom Left)
+  const centerX = 50, centerY = 50, radius = 40;
+  const crystalPoints = [
+    { x: centerX, y: centerY - (radius * safety / 100) }, // Safety
+    { x: centerX + (radius * permission / 100) * Math.cos(Math.PI/6), y: centerY + (radius * permission / 100) * Math.sin(Math.PI/6) }, // Permission
+    { x: centerX - (radius * ambition / 100) * Math.cos(Math.PI/6), y: centerY + (radius * ambition / 100) * Math.sin(Math.PI/6) } // Ambition
+  ];
+
   const levels = {
     safety: getLevel(safety),
     permission: getLevel(permission),
@@ -98,11 +113,14 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
   if (levels.permission === 'low' && levels.safety === 'high') scenario = "invisible_wealth";
   if (levels.safety === 'low' && levels.permission === 'low') scenario = "constant_crisis";
 
-  let pattern = "neutral", trap = "none", archetype = "observer";
-  if (levels.safety === 'low' && levels.ambition === 'high') { pattern = "burnout_marathon"; trap = "anxious_achievement"; archetype = "achiever"; }
-  else if (levels.permission === 'low' && levels.safety === 'high') { pattern = "golden_cage"; trap = "fear_of_joy"; archetype = "keeper"; }
-  else if (levels.safety === 'low' && levels.permission === 'low') { pattern = "survival_mode"; trap = "scarcity_mindset"; archetype = "prisoner"; }
-  else if (levels.ambition === 'high' && levels.permission === 'high') { pattern = "limitless_growth"; trap = "inflation_of_self"; archetype = "expander"; }
+  let archetype = "observer";
+  let trap = "none";
+  let pattern = "neutral";
+
+  if (levels.safety === 'low' && levels.ambition === 'high') { archetype = "achiever"; trap = "anxious_achievement"; pattern = "burnout"; }
+  else if (levels.permission === 'low' && levels.safety === 'high') { archetype = "keeper"; trap = "fear_of_joy"; pattern = "golden_cage"; }
+  else if (levels.safety === 'low' && levels.permission === 'low') { archetype = "prisoner"; trap = "scarcity_mindset"; pattern = "survival"; }
+  else if (levels.ambition === 'high' && levels.permission === 'high') { archetype = "expander"; trap = "inflation_of_self"; pattern = "expansion"; }
 
   const roadmapSteps = [];
   if (levels.safety === 'low') roadmapSteps.push({ label: "step_safety_title", action: "step_safety_desc", homework: "hw_safety" });
@@ -121,8 +139,9 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
     stressLevel: 100 - safety,
     levels,
     reflectionMirror: reflectionMirror.slice(-4),
-    analysisTextKeys: Array.from(new Set(traits)).slice(-3),
-    defenseMechanisms: ["Проекция", "Интроекция"],
+    analysisTextKeys: [],
+    defenseMechanisms: [],
+    crystalPoints,
     roadmap: {
       title: "roadmap_main_title",
       steps: roadmapSteps

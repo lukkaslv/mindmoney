@@ -70,7 +70,7 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
       ambition = Math.max(0, Math.min(100, ambition + t.a));
       traits.push(item.beliefKey);
       
-      const confKey = `${item.beliefKey}_${item.bodySensation === 'Ком в горле' ? 'throat' : item.bodySensation === 'Прилив тепла' ? 'warmth' : item.bodySensation === 'Груз на плечах' ? 'shoulders' : 'none'}`;
+      const confKey = `${item.beliefKey}_${item.bodySensation === 'Ком в горле' || item.bodySensation === 'ბურთი ყელში' ? 'throat' : item.bodySensation === 'Прилив тепла' || item.bodySensation === 'სითბოს მოზღვავება' ? 'warmth' : item.bodySensation === 'Груз на плечах' || item.bodySensation === 'სიმძიმე მხრებზე' ? 'shoulders' : 'none'}`;
 
       reflectionMirror.push({
         sceneTitle: scenes[item.sceneId]?.titleKey || "",

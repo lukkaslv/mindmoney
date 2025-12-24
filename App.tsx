@@ -45,7 +45,7 @@ const App: React.FC = () => {
     if (passwordInput.toLowerCase().trim() === MASTER_KEY || passwordInput === "money") {
       setIsAuthenticated(true);
       localStorage.setItem('is_auth', 'true');
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('success');
     } else {
       window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
     }
@@ -53,7 +53,7 @@ const App: React.FC = () => {
 
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
     
     const newHistory = [...state.history, { 
       sceneId: state.currentSceneId, 
@@ -64,18 +64,23 @@ const App: React.FC = () => {
 
     if (!intermediateFeedback.nextId || intermediateFeedback.nextId === 'end') {
       setLoading(true);
-      const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
-      setAnalysisData(data);
-      
-      let step = 0;
-      const timer = setInterval(() => {
-        setLoadingStep(s => s + 1);
-        if (++step >= t.loadingSteps.length) {
-          clearInterval(timer);
-          setLoading(false);
-          setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
-        }
-      }, 700);
+      try {
+        const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
+        setAnalysisData(data);
+        
+        let step = 0;
+        const timer = setInterval(() => {
+          setLoadingStep(s => s + 1);
+          if (++step >= t.loadingSteps.length) {
+            clearInterval(timer);
+            setLoading(false);
+            setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
+          }
+        }, 700);
+      } catch (e) {
+        console.error(e);
+        setLoading(false);
+      }
     } else {
       setIntermediateFeedback(null);
       setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
@@ -121,14 +126,12 @@ const App: React.FC = () => {
     return (
       <Layout lang={lang} onLangChange={setLang}>
         <div className="space-y-10 pb-32 animate-in fade-in slide-in-from-bottom-20 duration-1000">
-          {/* Identity Passport */}
           <div className="game-card p-10 bg-slate-900 text-white shadow-3xl relative overflow-hidden">
             <div className="relative z-10 space-y-6">
               <div className="flex justify-between items-start">
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.resultArchetype}</span>
                 <span className="text-[10px] font-black opacity-30">ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
               </div>
-              {/* Fix: Access archetypes translation safely */}
               <h2 className="text-5xl font-[900] tracking-tighter leading-none italic">{(t as any).archetypes?.[analysisData.archetypeKey] || analysisData.archetypeKey}</h2>
               <div className="pt-4 border-t border-white/10 flex flex-wrap gap-2">
                 <span className="px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase">Сценарий: {(t.scenarios as any)[analysisData.scenarioKey]}</span>
@@ -138,7 +141,6 @@ const App: React.FC = () => {
             <div className="absolute -bottom-10 -right-10 text-[12rem] opacity-[0.03] font-black rotate-12 select-none pointer-events-none">MONEY</div>
           </div>
 
-          {/* Confrontation Blocks (Mirror) */}
           <section className="space-y-6">
              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] px-4">{t.reflectionMirrorTitle}</h3>
              <div className="space-y-4">
@@ -154,7 +156,6 @@ const App: React.FC = () => {
              </div>
           </section>
 
-          {/* Action Roadmap with Homework */}
           <section className="space-y-8">
              <div className="flex items-center gap-6 px-4">
                 <h3 className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.5em]">{t.resultRoadmap}</h3>
@@ -179,7 +180,7 @@ const App: React.FC = () => {
           </section>
 
           <div className="grid gap-5 px-4">
-             <button onClick={() => window.Telegram?.WebApp?.openLink("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-indigo-200 shadow-2xl">{t.bookBtn}</button>
+             <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-indigo-200 shadow-2xl">{t.bookBtn}</button>
              <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center hover:text-indigo-600 transition-colors">{t.restartBtn}</button>
           </div>
         </div>
@@ -187,8 +188,37 @@ const App: React.FC = () => {
     );
   }
 
+  if (intermediateFeedback) {
+    return (
+      <Layout lang={lang} onLangChange={setLang}>
+        <div className="flex flex-col space-y-8 h-full animate-in slide-in-from-right-20 duration-700">
+          <div className="game-card p-10 flex-1 flex flex-col space-y-10 bg-white/60">
+            <div className="text-center space-y-3">
+              <h3 className="text-4xl font-[900] text-slate-900 tracking-tight">{t.reflectionTitle}</h3>
+              <p className="text-indigo-400 text-[11px] font-black uppercase tracking-[0.4em]">{t.reflectionSubtitle}</p>
+            </div>
+            
+            <div className="space-y-6">
+              <label className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] px-2">{t.bodyQuestion}</label>
+              <div className="grid grid-cols-2 gap-4">
+                {Object.entries(t.bodySensations).map(([key, label]) => (
+                  <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-6 rounded-[2rem] text-[12px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-white border-white text-slate-500 hover:border-indigo-100'}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-6 flex-1">
+              <label className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] px-2">{t.thoughtQuestion}</label>
+              <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-full min-h-[150px] p-8 bg-white border-2 border-white rounded-[3rem] text-xl font-medium outline-none focus:ring-[12px] focus:ring-indigo-50 transition-all resize-none shadow-inner placeholder:text-slate-200" placeholder="..." />
+            </div>
+          </div>
+          <button onClick={proceedToNext} className={`w-full py-8 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] transition-all active:scale-95 shadow-2xl ${intermediateFeedback.bodySensation ? 'btn-primary text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.confirmBtn}</button>
+        </div>
+      </Layout>
+    );
+  }
+
   const scene = INITIAL_SCENES[state.currentSceneId];
-  // Fix: Calculate currentProgress based on history length and total scenes
   const totalScenes = Object.keys(INITIAL_SCENES).length;
   const currentProgress = (state.history.length / totalScenes) * 100;
 
@@ -213,7 +243,7 @@ const App: React.FC = () => {
         <div className="grid gap-5 px-1 pb-10">
           {scene.choices.map((choice) => (
             <button key={choice.id} onClick={() => {
-              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy');
+              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('heavy');
               setIntermediateFeedback({ text: getTranslation(t, choice.textKey), nextId: choice.nextSceneId, belief: choice.beliefKey, userReflection: "", bodySensation: "" });
             }} className="w-full p-8 text-left rounded-[2.5rem] bg-white shadow-xl hover:shadow-indigo-100 border-2 border-white hover:border-indigo-200 transition-all group flex items-center justify-between active:scale-95">
               <span className="font-[900] text-xl text-slate-800 group-hover:text-indigo-600 leading-tight pr-6">{getTranslation(t, choice.textKey)}</span>

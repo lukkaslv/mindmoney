@@ -1,29 +1,28 @@
 
 export const translations = {
   ru: {
-    title: "MoneyMindset 💎",
-    subtitle: "Phenomenal Identity Lab",
+    title: "Luka Sulava 💎",
+    subtitle: "Premium Psychology Lab",
     enterPassword: "Код доступа",
     accessBtn: "Войти в систему",
     wrongPassword: "Код не принят",
     loadingSteps: [
-      "Сканирование паттернов...",
+      "Анализ Luka Sulava...",
       "Поиск теневых выгод...",
       "Интеграция ресурсов...",
-      "Проверка реальности..."
+      "Создание стратегии..."
     ],
     reflectionTitle: "Диагностика",
     reflectionSubtitle: "Честный взгляд внутрь",
     bodyQuestion: "Что говорит тело?",
     thoughtQuestion: "Мысль без цензуры",
-    confirmBtn: "Продолжить",
-    resultArchetype: "Финансовый Архетип",
+    confirmBtn: "Подтвердить выбор",
+    resultArchetype: "Ваш финансовый профиль",
     resultAnalysis: "Паспорт Идентичности",
-    resultRoadmap: "Контракт на изменения",
-    reflectionMirrorTitle: "Отражение в моменте",
-    bookBtn: "Сессия с психологом",
+    resultRoadmap: "Индивидуальный план",
+    reflectionMirrorTitle: "Ваши реакции",
+    bookBtn: "Записаться к Luka Sulava",
     restartBtn: "Начать заново",
-    // Fix: Added archetypes to translation object
     archetypes: {
       achiever: "Достигатор",
       keeper: "Хранитель",
@@ -72,20 +71,6 @@ export const translations = {
       step_master_title: "Фаза: Автономия",
       step_master_desc: "Ваш разум готов к системному богатству.",
       hw_master: "Изучите 1 инструмент инвестирования и сделайте первый пробный шаг."
-    },
-    traitsAnalysis: {
-      fear_of_punishment: "Ожидание 'расплаты' за успех блокирует вашу энергию.",
-      impulse_spend: "Слив ресурса как способ вернуться в привычную зону дефицита.",
-      money_is_danger: "Деньги для вас — это мишень. Безопаснее быть незаметным.",
-      poverty_is_virtue: "Вы путаете финансовую ограниченность с духовным ростом.",
-      fear_of_conflict: "Ваш страх отказать — это налог на вашу свободу.",
-      money_is_tool: "Здоровое восприятие ресурса как рычага.",
-      imposter_syndrome: "Обесценивание себя мешает адекватно оценивать свой труд.",
-      hard_work_only: "Вы верите, что деньги 'зарабатываются' только кровью и потом.",
-      capacity_expansion: "Ваш внутренний контейнер готов к принятию больших объемов.",
-      family_loyalty: "Лояльность родовой нищете мешает вашему взлету.",
-      guilt_after_pleasure: "Самопичевание за радость — это способ 'откупиться' от зависти богов.",
-      self_permission: "Право на жизнь в изобилии полностью восстановлено."
     },
     scenes: {
       welcome: {
@@ -147,30 +132,28 @@ export const translations = {
     }
   },
   ka: {
-    // Грузинский перевод будет дополнен провокациями и домашними заданиями по аналогии
-    title: "MoneyMindset 💎",
-    subtitle: "Phenomenal Identity Lab",
+    title: "Luka Sulava 💎",
+    subtitle: "Premium Psychology Lab",
     enterPassword: "წვდომის კოდი",
     accessBtn: "სისტემაში შესვლა",
     wrongPassword: "კოდი არასწორია",
     loadingSteps: [
-      "პატერნების სკანირება...",
+      "ლუკა სულავას ანალიზი...",
       "ჩრდილოვანი სარგებლის ძიება...",
       "რესურსების ინტეგრაცია...",
-      "რეალობის შემოწმება..."
+      "სტრატეგიის შექმნა..."
     ],
     reflectionTitle: "დიაგნოსტიკა",
     reflectionSubtitle: "გულწრფელი მზერა შიგნით",
     bodyQuestion: "რას ამბობს სხეული?",
     thoughtQuestion: "აზრი ცენზურის გარეშე",
-    confirmBtn: "გაგრძელება",
-    resultArchetype: "ფინანსური არქეტიპი",
+    confirmBtn: "დადასტურება",
+    resultArchetype: "ფინანსური პროფილი",
     resultAnalysis: "იდენტობის პასპორტი",
-    resultRoadmap: "ცვლილებების კონტრაქტი",
-    reflectionMirrorTitle: "ასახვა მომენტში",
-    bookBtn: "ფსიქოლოგთან სესია",
+    resultRoadmap: "ინდივიდუალური გეგმა",
+    reflectionMirrorTitle: "თქვენი რეაქციები",
+    bookBtn: "ჩაწერა ლუკა სულავასთან",
     restartBtn: "თავიდან დაწყება",
-    // Fix: Added archetypes to translation object
     archetypes: {
       achiever: "მიღწევადი",
       keeper: "მცველი",
@@ -218,20 +201,6 @@ export const translations = {
       step_master_title: "ფაზა: ავტონომია",
       step_master_desc: "თქვენი გონება მზად არის სისტემური სიმდიდრისთვის.",
       hw_master: "შეისწავლეთ ინვესტირების 1 ინსტრუმენტი."
-    },
-    traitsAnalysis: {
-      fear_of_punishment: "წარმატებისთვის 'საზღაურის' მოლოდინი ბლოკავს ენერგიას.",
-      impulse_spend: "რესურსის დახარჯვა დეფიციტის ზონაში დასაბრუნებლად.",
-      money_is_danger: "ფული თქვენთვის სამიზნეა. უსაფრთხოა იყოთ შეუმჩნეველი.",
-      poverty_is_virtue: "თქვენ ფინანსურ შეზღუდვას სულიერ ზრდაში ურევთ.",
-      fear_of_conflict: "უარის თქმის შიში თქვენი თავისუფლების გადასახადია.",
-      money_is_tool: "რესურსის ჯანსაღი აღქმა.",
-      imposter_syndrome: "თვითშეფასების ნაკლებობა ხელს გიშლით.",
-      hard_work_only: "გჯერათ, რომ ფული მხოლოდ სისხლით და ოფლით მოდის.",
-      capacity_expansion: "თქვენი შინაგანი კონტეინერი მზად არის.",
-      family_loyalty: "ოჯახური სიღარიბისადმი ლოიალობა ხელს გიშლით.",
-      guilt_after_pleasure: "თვითგვემა სიხარულისთვის.",
-      self_permission: "სიუხვეში ცხოვრების უფლება აღდგენილია."
     },
     scenes: {
       welcome: {

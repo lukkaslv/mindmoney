@@ -1,7 +1,7 @@
+
 import React, { useState } from 'react';
 import { translations } from '../translations.ts';
 
-// Fix: Declared Telegram on the global Window interface for the Telegram WebApp SDK
 declare global {
   interface Window {
     Telegram: {
@@ -21,9 +21,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
   const [showBuild, setShowBuild] = useState(false);
 
   const handleClearCache = () => {
-    // Fix: Accessing Telegram safely through the newly declared interface
-    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('warning');
-    if (confirm(lang === 'ru' ? "Очистить текущую сессию?" : "გსურთ სესიის გასუფთავება?")) {
+    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('warning');
+    if (confirm(lang === 'ru' ? "Начать новую сессию?" : "გსურთ ახალი სესიის დაწყება?")) {
       localStorage.clear();
       window.location.reload();
     }
@@ -32,8 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
   const toggleLang = () => {
     const nextLang = lang === 'ru' ? 'ka' : 'ru';
     onLangChange(nextLang);
-    // Fix: Accessing Telegram safely
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
   };
 
   return (
@@ -41,7 +39,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
       <header className="px-8 py-6 flex justify-between items-center z-30 relative shrink-0">
         <div className="flex flex-col">
           <h1 className="font-[900] text-2xl tracking-tight leading-none text-slate-800 flex items-center gap-2">
-            {t.title.replace('💎', '')} <span className="text-indigo-600">💎</span>
+            Luka Sulava <span className="text-indigo-600">💎</span>
           </h1>
           <span className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[0.4em] mt-2">
             {t.subtitle}
@@ -74,7 +72,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
           className="inline-block opacity-30 text-[8px] font-black uppercase tracking-[0.5em] cursor-pointer hover:opacity-100 transition-opacity"
           onClick={() => setShowBuild(!showBuild)}
         >
-          Psychology Lab • {lang.toUpperCase()}
+          Luka Sulava Lab • {lang.toUpperCase()}
         </div>
       </footer>
     </div>

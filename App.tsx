@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { translations } from './translations.ts';
@@ -33,13 +33,6 @@ const App: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
-
-  // Динамический стиль фона на основе стресса
-  const stressColor = useMemo(() => {
-    if (!analysisData) return 'rgba(99, 102, 241, 0.1)';
-    const level = analysisData.stressLevel;
-    return `rgba(${99 + level}, ${102 - level/2}, ${241 - level}, ${0.1 + level/1000})`;
-  }, [analysisData]);
 
   const handleLogin = () => {
     if (passwordInput.toLowerCase().trim() === MASTER_KEY || passwordInput === "money") {
@@ -82,8 +75,9 @@ const App: React.FC = () => {
         setLoading(false);
       }
     } else {
+      const nextId = intermediateFeedback.nextId;
       setIntermediateFeedback(null);
-      setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
+      setState((prev: any) => ({ ...prev, currentSceneId: nextId, history: newHistory }));
     }
   }, [intermediateFeedback, state, t.loadingSteps.length]);
 
@@ -138,7 +132,7 @@ const App: React.FC = () => {
                 <span className="px-4 py-2 bg-white/10 rounded-full text-[9px] font-black uppercase">Ловушка: {(t.traps as any)[analysisData.trapKey]}</span>
               </div>
             </div>
-            <div className="absolute -bottom-10 -right-10 text-[12rem] opacity-[0.03] font-black rotate-12 select-none pointer-events-none">MONEY</div>
+            <div className="absolute -bottom-10 -right-10 text-[12rem] opacity-[0.03] font-black rotate-12 select-none pointer-events-none">LUKA</div>
           </div>
 
           <section className="space-y-6">
@@ -180,7 +174,7 @@ const App: React.FC = () => {
           </section>
 
           <div className="grid gap-5 px-4">
-             <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-indigo-200 shadow-2xl">{t.bookBtn}</button>
+             <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/thndrrr")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-indigo-200 shadow-2xl">{t.bookBtn}</button>
              <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center hover:text-indigo-600 transition-colors">{t.restartBtn}</button>
           </div>
         </div>

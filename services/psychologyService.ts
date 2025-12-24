@@ -88,7 +88,9 @@ export function calculateGenesisCore(history: any[]): AnalysisResult {
     'capacity_expansion': { f: 10, a: 25, r: 25, e: 5 },
     'family_loyalty': { f: 30, a: -15, r: -20, e: 12 },
     'boundary_collapse': { f: -20, a: -40, r: 0, e: 30 },
-    'fear_of_power': { f: 0, a: -20, r: -10, e: 20 }
+    'fear_of_power': { f: 0, a: -20, r: -10, e: 20 },
+    'scarcity_mindset': { f: -25, a: -10, r: -15, e: 30 },
+    'short_term_bias': { f: 0, a: 10, r: -20, e: 15 }
   };
 
   history.forEach(h => {

@@ -9,10 +9,10 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
   
-  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'results'>('auth');
+  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'results'>('auth');
   const [password, setPassword] = useState("");
   const [activeModule, setActiveModule] = useState<string | null>(null);
-  const [state, setState] = useState({ currentId: 'welcome', history: [] as any[] });
+  const [state, setState] = useState({ currentId: 'welcome', history: [] as any[], lastChoice: null as any });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [globalProgress, setGlobalProgress] = useState(0);
@@ -66,9 +66,29 @@ const App: React.FC = () => {
   const startModule = (moduleId: string) => {
     setActiveModule(moduleId);
     const firstSceneId = Object.keys(MODULE_REGISTRY[moduleId])[0];
-    setState({ currentId: firstSceneId, history: [] });
+    setState({ currentId: firstSceneId, history: [], lastChoice: null });
     setView('test');
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
+  };
+
+  const handleChoice = (choice: any) => {
+    setState({ ...state, lastChoice: choice });
+    setView('body_sync');
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
+  };
+
+  const syncBodySensation = (sensation: string) => {
+    const nextHistory = [...state.history, { 
+      beliefKey: state.lastChoice.beliefKey,
+      sensation: sensation 
+    }];
+    
+    if (state.lastChoice.nextSceneId && state.lastChoice.nextSceneId !== 'end') {
+      setState({ ...state, currentId: state.lastChoice.nextSceneId, history: nextHistory, lastChoice: null });
+      setView('test');
+    } else {
+      finishTest(nextHistory);
+    }
   };
 
   const finishTest = (history: any[]) => {
@@ -113,7 +133,7 @@ const App: React.FC = () => {
 
   if (view === 'boot') return (
     <Layout lang={lang} onLangChange={setLang}>
-      <div className="flex flex-col items-start justify-center py-20 px-8 space-y-4 font-mono">
+      <div className="flex flex-col items-start justify-center py-20 px-8 space-y-4 font-mono h-full">
         {bootMessages.slice(0, bootStep + 1).map((msg, i) => (
           <div key={i} className="flex gap-4 items-start">
             <span className="text-indigo-500 shrink-0">[{new Date().toLocaleTimeString()}]</span>
@@ -131,11 +151,11 @@ const App: React.FC = () => {
         <section className="px-4 space-y-4">
            <div className="flex justify-between items-end">
               <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{getT('global.stats')}</h3>
-              <span className="text-[9px] font-mono text-indigo-500">VER: 6.0.8</span>
+              <span className="text-[9px] font-mono text-indigo-500">VER: 6.2.1</span>
            </div>
            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -mr-12 -mt-12"></div>
+              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest block mb-1">{getT('global.level')}</span>
                  <span className="text-2xl font-black text-indigo-400 italic">ARCH_0{Math.floor(globalProgress / 10) + 1}</span>
               </div>
@@ -153,11 +173,11 @@ const App: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-5 px-4">
           {[
-            { id: 'foundation', title: getT('dashboard.foundation'), active: false, icon: '🛡️' },
+            { id: 'foundation', title: getT('dashboard.foundation'), active: true, icon: '🛡️', moduleId: 'foundation' },
             { id: 'agency', title: getT('dashboard.agency'), active: true, icon: '▲', moduleId: 'agency' },
             { id: 'money', title: getT('dashboard.resource'), active: true, icon: '▣', moduleId: 'money' },
             { id: 'social', title: getT('dashboard.social'), active: true, icon: '◈', moduleId: 'social' },
-            { id: 'legacy', title: getT('dashboard.legacy'), active: false, icon: '○' }
+            { id: 'legacy', title: getT('dashboard.legacy'), active: true, icon: '○', moduleId: 'legacy' }
           ].map(m => (
             <button key={m.id} onClick={() => m.active && m.moduleId && startModule(m.moduleId)} className={`aspect-square rounded-[2rem] border flex flex-col items-start justify-between p-7 transition-all group relative overflow-hidden ${
               m.active ? 'bg-white border-slate-100 shadow-md hover:border-indigo-500 active:scale-95' : 'bg-slate-50 border-slate-50 opacity-40 cursor-not-allowed'
@@ -173,13 +193,23 @@ const App: React.FC = () => {
         <section className="px-4 space-y-4">
           <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{getT('global.achievements')}</h3>
           <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-            {['NODE_INIT', 'RESRC_AUTH', 'WILL_SYNC', 'SOC_MAP'].map((ach, i) => (
-              <div key={ach} className={`shrink-0 p-4 rounded-2xl border ${i * 20 < globalProgress ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-300'} text-[9px] font-black font-mono`}>
+            {['NODE_INIT', 'RESRC_AUTH', 'WILL_SYNC', 'SOC_MAP', 'LEGACY_PULSE', 'BODY_CORE'].map((ach, i) => (
+              <div key={ach} className={`shrink-0 p-4 rounded-2xl border ${i * 15 < globalProgress ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-slate-50 border-slate-100 text-slate-300'} text-[9px] font-black font-mono`}>
                 {ach}
               </div>
             ))}
           </div>
         </section>
+
+        <div className="px-4 overflow-hidden border-y border-slate-100 py-4">
+           <div className="whitespace-nowrap flex gap-8 animate-marquee">
+              {[1, 2, 3].map(i => (
+                <span key={i} className="text-[8px] font-mono text-slate-300 uppercase tracking-widest">
+                  SYNCING_NODE_{i} ... OK ... CORE_TEMP: 36.6C ... SECURITY: ACTIVE ... ARCHITECT_MODE: ON ...
+                </span>
+              ))}
+           </div>
+        </div>
       </div>
     </Layout>
   );
@@ -190,48 +220,31 @@ const App: React.FC = () => {
       <Layout lang={lang} onLangChange={setLang}>
         <div className="flex flex-col items-center justify-center h-96 space-y-8 animate-pulse">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-          <div className="space-y-3 text-center">
-             <p className="text-[10px] font-mono text-indigo-500 uppercase tracking-[0.4em]">Decoding_Neural_Matrix</p>
-             <div className="w-32 h-1 bg-slate-100 mx-auto rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 animate-progress"></div>
-             </div>
-          </div>
+          <p className="text-[10px] font-mono text-indigo-500 uppercase tracking-[0.4em]">Decoding_Neural_Matrix</p>
         </div>
       </Layout>
     );
 
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-10 py-6 animate-in">
+        <div className="space-y-10 py-6 animate-in relative">
+          <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/10 overflow-hidden">
+             <div className="h-full bg-indigo-500 animate-scan-line"></div>
+          </div>
           <div className="px-4 flex justify-between items-end">
             <div className="space-y-1">
               <span className="text-[9px] font-mono text-indigo-500 uppercase tracking-widest">Core_Node: {activeModule.toUpperCase()}_0{state.history.length + 1}</span>
               <h3 className="text-2xl font-black italic uppercase text-slate-900 leading-tight">{getT(scene.titleKey)}</h3>
             </div>
-            <div className="flex gap-1">
-              {Object.keys(MODULE_REGISTRY[activeModule]).map((_, i) => (
-                <div key={i} className={`w-3 h-1 rounded-full ${i <= state.history.length ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
-              ))}
-            </div>
           </div>
           <div className="px-4">
-            <div className="bg-slate-950 p-10 rounded-[2.5rem] text-indigo-100/90 font-medium italic border border-indigo-500/20 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent group-hover:via-indigo-500 transition-all duration-1000"></div>
-              <div className="absolute -right-4 -bottom-4 text-indigo-500/5 text-6xl font-black select-none uppercase">{activeModule}</div>
+            <div className="bg-slate-950 p-10 rounded-[2.5rem] text-indigo-100/90 font-medium italic border border-indigo-500/20 shadow-2xl relative overflow-hidden group min-h-[160px] flex items-center">
               {getT(scene.descKey)}
             </div>
           </div>
           <div className="px-4 space-y-4">
             {scene.choices.map((c, i) => (
-              <button key={c.id} onClick={() => {
-                const nextHistory = [...state.history, { beliefKey: c.beliefKey }];
-                if (c.nextSceneId && c.nextSceneId !== 'end') {
-                  setState({ ...state, currentId: c.nextSceneId, history: nextHistory });
-                  window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
-                } else {
-                  finishTest(nextHistory);
-                }
-              }} className="w-full p-7 text-left bg-white border border-slate-200 rounded-3xl shadow-sm hover:border-indigo-500 font-bold text-[11px] uppercase flex items-center gap-5 transition-all active:bg-indigo-50 group">
+              <button key={c.id} onClick={() => handleChoice(c)} className="w-full p-7 text-left bg-white border border-slate-200 rounded-3xl shadow-sm hover:border-indigo-500 font-bold text-[11px] uppercase flex items-center gap-5 transition-all active:bg-indigo-50 group">
                 <span className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-indigo-300 font-mono text-[9px] group-hover:bg-indigo-500 group-hover:text-white transition-colors">0{i+1}</span>
                 <span className="flex-1">{getT(c.textKey)}</span>
               </button>
@@ -241,6 +254,33 @@ const App: React.FC = () => {
       </Layout>
     );
   }
+
+  if (view === 'body_sync') return (
+    <Layout lang={lang} onLangChange={setLang}>
+       <div className="space-y-10 py-10 animate-in text-center">
+          <div className="relative inline-block mx-auto">
+             <div className="w-20 h-20 rounded-full border-2 border-indigo-500/20 flex items-center justify-center animate-ping absolute inset-0"></div>
+             <div className="w-20 h-20 rounded-full bg-slate-950 flex items-center justify-center text-indigo-500 text-2xl relative z-10 border border-indigo-500/30">📡</div>
+          </div>
+          <div className="space-y-2">
+             <h3 className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600">{getT('sync.title')}</h3>
+             <p className="text-sm font-medium text-slate-800 px-10">{getT('sync.desc')}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 px-4">
+             {[
+               { key: 's1', label: getT('sync.s1') },
+               { key: 's2', label: getT('sync.s2') },
+               { key: 's3', label: getT('sync.s3') },
+               { key: 's4', label: getT('sync.s4') }
+             ].map(s => (
+               <button key={s.key} onClick={() => syncBodySensation(s.key)} className="p-6 bg-white border border-slate-100 rounded-[2rem] shadow-sm active:bg-indigo-600 active:text-white transition-all text-[9px] font-black uppercase tracking-widest hover:border-indigo-500">
+                  {s.label}
+               </button>
+             ))}
+          </div>
+       </div>
+    </Layout>
+  );
 
   if (view === 'results' && result) return (
     <Layout lang={lang} onLangChange={setLang}>

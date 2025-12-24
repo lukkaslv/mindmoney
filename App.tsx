@@ -17,23 +17,32 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [globalProgress, setGlobalProgress] = useState(0);
   const [bootStep, setBootStep] = useState(0);
-  
-  // Имитация 50 узлов
-  const nodes = useMemo(() => {
-    return Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      domain: i < 10 ? 'foundation' : i < 20 ? 'agency' : i < 30 ? 'money' : i < 40 ? 'social' : 'legacy',
-      moduleId: i < 10 ? 'foundation' : i < 20 ? 'agency' : i < 30 ? 'money' : i < 40 ? 'social' : 'legacy',
-      active: i < 5 || (i < 15 && globalProgress > 20) || (i < 30 && globalProgress > 50),
-      done: i < Math.floor(globalProgress / 2)
-    }));
-  }, [globalProgress]);
+  const [selectedBug, setSelectedBug] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('app_lang', lang);
     const saved = localStorage.getItem('global_progress');
     if (saved) setGlobalProgress(parseInt(saved));
   }, [lang]);
+
+  const domainColors: Record<string, string> = {
+    foundation: 'rgba(239, 68, 68, 0.05)',
+    agency: 'rgba(34, 197, 94, 0.05)',
+    money: 'rgba(99, 102, 241, 0.05)',
+    social: 'rgba(168, 85, 247, 0.05)',
+    legacy: 'rgba(236, 72, 153, 0.05)'
+  };
+
+  const currentBg = activeModule ? domainColors[activeModule] : 'transparent';
+
+  const nodes = useMemo(() => {
+    return Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      moduleId: i < 10 ? 'foundation' : i < 20 ? 'agency' : i < 30 ? 'money' : i < 40 ? 'social' : 'legacy',
+      active: i < 5 || (i < 15 && globalProgress > 20) || (i < 30 && globalProgress > 50),
+      done: i < Math.floor(globalProgress / 2)
+    }));
+  }, [globalProgress]);
 
   const bootMessages = [t.boot.init, t.boot.load_core, t.boot.check_integrity, t.boot.establish_link, t.boot.ready];
 
@@ -163,6 +172,7 @@ const App: React.FC = () => {
            <div className="mt-6 h-1 bg-slate-900 rounded-full overflow-hidden">
               <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${globalProgress}%` }}></div>
            </div>
+           <div className="absolute inset-0 bg-indigo-500/5 animate-pulse pointer-events-none"></div>
         </section>
 
         <div className="grid grid-cols-5 gap-2 pb-6">
@@ -199,7 +209,7 @@ const App: React.FC = () => {
     const scene = MODULE_REGISTRY[activeModule][state.currentId];
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-10 py-6 animate-in relative px-4">
+        <div className="space-y-10 py-6 animate-in relative px-4" style={{ backgroundColor: currentBg }}>
           <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/10 overflow-hidden">
              <div className="h-full bg-indigo-500 animate-scan-line"></div>
           </div>
@@ -248,6 +258,16 @@ const App: React.FC = () => {
   if (view === 'results' && result) return (
     <Layout lang={lang} onLangChange={setLang}>
       <div className="space-y-10 pb-24 animate-in px-4">
+        {selectedBug && (
+           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm animate-in" onClick={() => setSelectedBug(null)}>
+              <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-xs space-y-6" onClick={e => e.stopPropagation()}>
+                 <h4 className="font-black text-xl uppercase italic text-indigo-600">{getT(`beliefs.${selectedBug}`)}</h4>
+                 <p className="text-sm text-slate-600 leading-relaxed italic">{getT(`explanations.${selectedBug}`)}</p>
+                 <button onClick={() => setSelectedBug(null)} className="w-full p-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest">Close_Log</button>
+              </div>
+           </div>
+        )}
+
         <header className="flex justify-between items-start">
            <div className="space-y-1">
               <span className="text-[9px] font-black text-indigo-500 uppercase tracking-[0.3em]">Identity_Output</span>
@@ -287,13 +307,16 @@ const App: React.FC = () => {
         </div>
 
         <section className="space-y-4">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{getT('results.logTitle')}</h3>
+          <div className="flex justify-between items-end">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{getT('results.logTitle')}</h3>
+            <span className="text-[8px] font-mono text-indigo-400 uppercase">{getT('results.click_info')}</span>
+          </div>
           <div className="space-y-2">
             {result.bugs.map(v => (
-              <div key={v} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between">
+              <button key={v} onClick={() => setSelectedBug(v)} className="w-full bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between hover:border-indigo-300 transition-colors group">
                 <span className="text-[10px] font-black text-slate-900 uppercase">{getT(`beliefs.${v}`)}</span>
-                <span className="text-[8px] font-mono text-red-400">ALERT</span>
-              </div>
+                <span className="text-[8px] font-mono text-red-400 group-hover:text-indigo-400">INFO >></span>
+              </button>
             ))}
           </div>
         </section>

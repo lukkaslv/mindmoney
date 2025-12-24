@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { translations } from './translations.ts';
@@ -17,46 +17,10 @@ const getTranslation = (obj: any, path: string) => {
   return path.split('.').reduce((prev, curr) => prev && prev[curr], obj) || path;
 };
 
-const playSound = (type: 'click' | 'success' | 'focus') => {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    const now = ctx.currentTime;
-    
-    if (type === 'click') {
-      osc.frequency.setValueAtTime(350, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
-      gain.gain.setValueAtTime(0.06, now);
-      osc.start(); osc.stop(now + 0.12);
-    } else if (type === 'focus') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.linearRampToValueAtTime(200, now + 0.5);
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.04, now + 0.1);
-      gain.gain.linearRampToValueAtTime(0, now + 0.5);
-      osc.start(); osc.stop(now + 0.5);
-    } else if (type === 'success') {
-      [440, 554, 659].forEach((f, i) => {
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.setValueAtTime(f, now + i * 0.1);
-        g.gain.setValueAtTime(0.05, now + i * 0.1);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-        o.start(now + i * 0.1); o.stop(now + 0.5);
-      });
-    }
-  } catch (e) {}
-};
-
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { 
     localStorage.setItem('app_lang', lang);
@@ -65,7 +29,6 @@ const App: React.FC = () => {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('is_auth') === 'true');
   const [passwordInput, setPasswordInput] = useState("");
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [state, setState] = useState<any>({ currentSceneId: 'welcome', history: [], isFinished: false });
   const [intermediateFeedback, setIntermediateFeedback] = useState<any>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
@@ -75,20 +38,11 @@ const App: React.FC = () => {
   const totalScenes = Object.keys(INITIAL_SCENES).length;
   const currentProgress = (state.history.length / totalScenes) * 100;
 
-  useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.setHeaderColor('#fdfdff');
-    }
-  }, []);
-
   const handleLogin = () => {
-    const input = passwordInput.toLowerCase().trim();
-    if (input === MASTER_KEY || input === "money") {
+    if (passwordInput.toLowerCase().trim() === MASTER_KEY || passwordInput === "money") {
       setIsAuthenticated(true);
       localStorage.setItem('is_auth', 'true');
-      playSound('success');
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
     } else {
       window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
     }
@@ -96,8 +50,7 @@ const App: React.FC = () => {
 
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
-    playSound('click');
-    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
     
     const newHistory = [...state.history, { 
       sceneId: state.currentSceneId, 
@@ -105,35 +58,30 @@ const App: React.FC = () => {
       bodySensation: intermediateFeedback.bodySensation,
       userReflection: intermediateFeedback.userReflection
     }];
-    
-    setIsTransitioning(true);
-    setIntermediateFeedback(null);
-    
-    setTimeout(async () => {
-      if (!intermediateFeedback.nextId || intermediateFeedback.nextId === 'end') {
-        setLoading(true);
-        const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
-        setAnalysisData(data);
-        
-        let step = 0;
-        const timer = setInterval(() => {
-          setLoadingStep(s => s + 1);
-          if (++step >= t.loadingSteps.length) {
-            clearInterval(timer);
-            setLoading(false);
-            setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
-            playSound('success');
-          }
-        }, 600);
-      } else {
-        setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
-      }
-      setIsTransitioning(false);
-    }, 400);
+
+    if (!intermediateFeedback.nextId || intermediateFeedback.nextId === 'end') {
+      setLoading(true);
+      const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
+      setAnalysisData(data);
+      
+      let step = 0;
+      const timer = setInterval(() => {
+        setLoadingStep(s => s + 1);
+        if (++step >= t.loadingSteps.length) {
+          clearInterval(timer);
+          setLoading(false);
+          setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
+          window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+        }
+      }, 600);
+    } else {
+      setIntermediateFeedback(null);
+      setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
+    }
   }, [intermediateFeedback, state, t.loadingSteps.length]);
 
   const RadarChart = ({ safety, permission, ambition }: any) => {
-    const size = 300; const center = size / 2; const r = 90;
+    const size = 280; const center = size / 2; const r = 85;
     const points = [
       [center, center - (r * (safety || 50) / 100)],
       [center + (r * (permission || 50) / 100 * 0.866), center + (r * (permission || 50) / 100 * 0.5)],
@@ -141,24 +89,15 @@ const App: React.FC = () => {
     ];
     const path = `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]} L ${points[2][0]} ${points[2][1]} Z`;
     
-    const labels = [
-      { text: lang === 'ru' ? 'Безопасность' : 'უსაფრთხოება', x: center, y: center - r - 25 },
-      { text: lang === 'ru' ? 'Разрешение' : 'ნებადართვა', x: center + r + 15, y: center + r / 2 + 15 },
-      { text: lang === 'ru' ? 'Амбиции' : 'ამბიციები', x: center - r - 15, y: center + r / 2 + 15 }
-    ];
-
     return (
-      <div className="flex flex-col items-center py-12 relative overflow-visible">
-        <svg width={size} height={size} className="drop-shadow-[0_20px_40px_rgba(99,102,241,0.2)] overflow-visible">
-          {[0.25, 0.5, 0.75, 1].map(scale => (
-            <path key={scale} d={`M ${center} ${center - r*scale} L ${center + r*scale*0.866} ${center + r*scale*0.5} L ${center - r*scale*0.866} ${center + r*scale*0.5} Z`} fill="none" stroke="rgba(99, 102, 241, 0.1)" strokeWidth="1" />
+      <div className="flex flex-col items-center py-6 relative">
+        <svg width={size} height={size} className="drop-shadow-2xl overflow-visible">
+          {[0.2, 0.4, 0.6, 0.8, 1].map(scale => (
+            <path key={scale} d={`M ${center} ${center - r*scale} L ${center + r*scale*0.866} ${center + r*scale*0.5} L ${center - r*scale*0.866} ${center + r*scale*0.5} Z`} fill="none" stroke="rgba(99, 102, 241, 0.05)" strokeWidth="1" />
           ))}
-          <path d={path} fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" strokeWidth="6" strokeLinejoin="round" className="animate-in zoom-in duration-1000" />
-          {labels.map((l, i) => (
-            <text key={i} x={l.x} y={l.y} textAnchor="middle" className="fill-slate-400 font-black text-[9px] uppercase tracking-[0.2em]">{l.text}</text>
-          ))}
+          <path d={path} fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" strokeWidth="4" strokeLinejoin="round" className="animate-pulse" />
           {points.map((p, i) => (
-            <circle key={i} cx={p[0]} cy={p[1]} r="7" fill="#6366f1" stroke="white" strokeWidth="3" />
+            <circle key={i} cx={p[0]} cy={p[1]} r="5" fill="#6366f1" stroke="white" strokeWidth="2" />
           ))}
         </svg>
       </div>
@@ -168,16 +107,12 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 animate-in fade-in zoom-in duration-700">
-          <div className="w-32 h-32 bg-white rounded-[3.5rem] shadow-2xl flex items-center justify-center text-6xl border border-white/60 relative">
-            💎 <div className="absolute inset-0 bg-indigo-400 blur-[80px] opacity-25 -z-10 animate-pulse"></div>
-          </div>
-          <div className="w-full space-y-8 text-center px-4">
-            <h2 className="text-4xl font-[900] tracking-tighter text-slate-800 leading-tight">{t.enterPassword}</h2>
-            <div className="space-y-5">
-              <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••" className="w-full p-8 bg-white/70 backdrop-blur-xl border-2 border-white rounded-[2.5rem] text-center font-black text-4xl outline-none focus:ring-8 focus:ring-indigo-50 transition-all shadow-inner" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
-              <button onClick={handleLogin} className="w-full btn-primary py-7 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] active:scale-95 transition-transform">{t.accessBtn}</button>
-            </div>
+        <div className="flex flex-col items-center justify-center min-h-[75vh] space-y-12 animate-in fade-in duration-700">
+          <div className="w-24 h-24 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center text-4xl border border-white/60">💎</div>
+          <div className="w-full space-y-6 text-center px-4">
+            <h2 className="text-3xl font-[900] text-slate-800 leading-tight">{t.enterPassword}</h2>
+            <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••" className="w-full p-6 bg-white border-2 border-indigo-50 rounded-3xl text-center font-black text-2xl outline-none focus:border-indigo-500 transition-all shadow-inner" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+            <button onClick={handleLogin} className="w-full btn-primary py-6 text-white rounded-3xl font-black text-sm uppercase tracking-widest">{t.accessBtn}</button>
           </div>
         </div>
       </Layout>
@@ -187,13 +122,12 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="game-card p-12 flex flex-col items-center justify-center space-y-12 min-h-[550px] scene-transition">
-          <div className="relative w-40 h-40">
-            <div className="absolute inset-0 border-[12px] border-indigo-50 rounded-full"></div>
-            <div className="absolute inset-0 border-[12px] border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center text-4xl animate-pulse">🧬</div>
+        <div className="game-card p-12 flex flex-col items-center justify-center space-y-12 min-h-[500px]">
+          <div className="relative w-32 h-32">
+            <div className="absolute inset-0 border-8 border-indigo-100 rounded-full"></div>
+            <div className="absolute inset-0 border-8 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <p className="text-slate-800 font-[900] text-sm uppercase tracking-[0.2em] text-center animate-pulse leading-relaxed px-8 h-12 flex items-center">{t.loadingSteps[loadingStep % t.loadingSteps.length]}</p>
+          <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] text-center animate-pulse">{t.loadingSteps[loadingStep % t.loadingSteps.length]}</p>
         </div>
       </Layout>
     );
@@ -202,92 +136,57 @@ const App: React.FC = () => {
   if (state.isFinished && analysisData) {
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-10 pb-24 scene-transition">
-          {/* Header Result */}
-          <div className="game-card p-10 border-b-[12px] border-indigo-600 shadow-3xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-5 text-6xl rotate-12 select-none">💎</div>
-            <div className="text-center space-y-3 mb-6">
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">{t.resultArchetype}</span>
-              <h2 className="text-4xl font-[900] text-slate-900 tracking-tight leading-none italic uppercase">
-                {(t.archetypes as any)[analysisData.archetypeKey]}
-              </h2>
-              <div className="inline-block px-5 py-2.5 bg-slate-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest mt-4 shadow-xl">
-                {t.resultConflict}: {(t.conflicts as any)[analysisData.conflictKey]}
-              </div>
+        <div className="space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+          {/* Header Identity Card */}
+          <div className="game-card p-8 text-center bg-slate-900 text-white shadow-indigo-500/20 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-5xl">🧬</div>
+            <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.resultArchetype}</span>
+            <h2 className="text-4xl font-[900] mt-2 mb-4 italic">{(t.archetypes as any)[analysisData.archetypeKey]}</h2>
+            <div className="inline-block px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest mb-6">
+              Паттерн: {(t.patterns as any)[analysisData.patternKey]}
             </div>
             <RadarChart safety={analysisData.scoreSafety} permission={analysisData.scorePermission} ambition={analysisData.scoreAmbition} />
           </div>
 
-          {/* Reflection Mirror (Self-Validation Block) */}
-          <section className="space-y-6">
-            <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4 px-4">
-              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.reflectionMirrorTitle || "Зеркало Ваших Чувств"}
-            </h3>
+          {/* Deep Insights (The 'Meat') */}
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4">{t.resultAnalysis}</h3>
             <div className="grid gap-4">
-              {analysisData.reflectionMirror.map((item, i) => (
-                <div key={i} className="game-card p-8 border-l-8 border-indigo-200 bg-white/40">
-                   <div className="flex flex-col gap-4">
-                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{getTranslation(t, item.sceneTitle)}</span>
-                      <p className="text-lg font-medium italic text-slate-700 leading-relaxed">"{item.thought}"</p>
-                      {item.sensation && (
-                        <div className="flex items-center gap-2 mt-2">
-                           <span className="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full font-bold uppercase tracking-wider">{item.sensation}</span>
-                        </div>
-                      )}
+              <div className="game-card p-6 bg-white/50 border-l-8 border-rose-500">
+                <span className="text-[9px] font-black text-rose-500 uppercase">Теневая ловушка</span>
+                <p className="text-lg font-bold text-slate-800 mt-1">{(t.traps as any)[analysisData.trapKey]}</p>
+              </div>
+              {analysisData.analysisTextKeys.map((key, i) => (
+                <div key={i} className="game-card p-6 bg-white shadow-sm border border-slate-100">
+                  <p className="text-md leading-relaxed text-slate-600 font-medium">{(t.traitsAnalysis as any)[key]}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Action Roadmap */}
+          <section className="space-y-6 pt-4">
+             <div className="flex items-center gap-4 px-4">
+                <div className="h-px bg-indigo-200 flex-1"></div>
+                <h3 className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.3em]">{t.resultRoadmap}</h3>
+                <div className="h-px bg-indigo-200 flex-1"></div>
+             </div>
+             <div className="space-y-4">
+               {analysisData.roadmap.steps.map((step, i) => (
+                 <div key={i} className="game-card p-8 flex gap-6 items-start bg-gradient-to-br from-white to-indigo-50/30">
+                   <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-lg">{i+1}</div>
+                   <div>
+                     <h4 className="font-[900] text-slate-800 text-sm uppercase tracking-wide">{(t.roadmapSteps as any)[step.label]}</h4>
+                     <p className="text-slate-600 mt-2 text-md leading-relaxed">{(t.roadmapSteps as any)[step.action]}</p>
                    </div>
-                </div>
-              ))}
-            </div>
+                 </div>
+               ))}
+             </div>
           </section>
 
-          {/* Deep Analysis Cards */}
-          <section className="space-y-6">
-            <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4 px-4">
-              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.resultAnalysis}
-            </h3>
-            <div className="grid gap-6">
-              {analysisData.analysisTextKeys.map((key: string, i: number) => (
-                <div key={i} className="game-card p-8 bg-slate-900 text-white shadow-2xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
-                  <div className="flex gap-6">
-                    <span className="text-4xl opacity-50">🧩</span>
-                    <p className="text-lg leading-relaxed font-medium">{(t.traitsAnalysis as any)[key]}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3 px-4">
-              {analysisData.defenseMechanisms.map((def: string, i: number) => (
-                <span key={i} className="px-5 py-2.5 bg-white border border-slate-100 text-slate-600 rounded-2xl text-[10px] font-black uppercase shadow-sm">🛡️ {def}</span>
-              ))}
-            </div>
-          </section>
-
-          {/* Roadmap */}
-          <section className="space-y-8 px-2">
-            <h3 className="text-[12px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-4">
-              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.resultRoadmap}
-            </h3>
-            <div className="space-y-4">
-              {[
-                { label: t.roadmapLabels.now, icon: "🎯", key: analysisData.roadmapKeys.now },
-                { label: t.roadmapLabels.month1, icon: "🔄", key: analysisData.roadmapKeys.month1 },
-                { label: t.roadmapLabels.month6, icon: "🚀", key: analysisData.roadmapKeys.month6 }
-              ].map((step, i) => (
-                <div key={i} className="flex gap-6 p-8 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white shadow-xl">
-                  <div className="w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl shrink-0 shadow-lg">{step.icon}</div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{step.label}</span>
-                    <p className="text-md font-bold text-slate-800 leading-tight">{(t.roadmapTips as any)[step.key]}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <div className="grid gap-5 px-4">
-            <button onClick={() => window.Telegram?.WebApp?.openLink("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[3rem] font-black text-sm uppercase tracking-[0.4em] active:scale-95 transition-transform">{t.bookBtn}</button>
-            <button onClick={() => window.location.reload()} className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-indigo-600 transition-colors text-center">{t.restartBtn}</button>
+          <div className="grid gap-4 px-2">
+            <button onClick={() => window.Telegram?.WebApp?.openLink("https://t.me/your_username")} className="w-full btn-primary py-7 text-white rounded-3xl font-black text-sm uppercase tracking-widest shadow-2xl">Запись на разбор</button>
+            <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Перезапустить сессию</button>
           </div>
         </div>
       </Layout>
@@ -297,28 +196,28 @@ const App: React.FC = () => {
   if (intermediateFeedback) {
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="flex flex-col space-y-8 scene-transition h-full pt-4">
-          <div className="game-card p-10 flex-1 flex flex-col space-y-12 relative overflow-hidden bg-indigo-900/5">
-            <div className="space-y-3 text-center">
-              <h3 className="text-4xl font-[900] text-slate-900 tracking-tight">{t.reflectionTitle}</h3>
-              <p className="text-indigo-400 text-[11px] font-black uppercase tracking-[0.4em]">{t.reflectionSubtitle}</p>
+        <div className="flex flex-col space-y-6 h-full animate-in slide-in-from-right-10 duration-500">
+          <div className="game-card p-8 flex-1 flex flex-col space-y-8 bg-indigo-50/50">
+            <div className="text-center space-y-2">
+              <h3 className="text-3xl font-[900] text-slate-900">{t.reflectionTitle}</h3>
+              <p className="text-indigo-500 text-[10px] font-black uppercase tracking-widest">{t.reflectionSubtitle}</p>
             </div>
             
-            <div className="space-y-8">
-              <label className="text-[13px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4"><span className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse"></span> {t.bodyQuestion}</label>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Телесный отклик</label>
+              <div className="grid grid-cols-2 gap-3">
                 {Object.entries(t.bodySensations).map(([key, label]) => (
-                  <button key={key} onClick={() => { playSound('focus'); setIntermediateFeedback({...intermediateFeedback, bodySensation: label})}} className={`p-7 rounded-[2.5rem] text-[12px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-indigo-600 border-indigo-600 text-white shadow-2xl scale-105' : 'bg-white/80 border-white text-slate-500 hover:border-indigo-100'}`}>{label}</button>
+                  <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-4 rounded-2xl text-[11px] font-bold transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-indigo-600 border-indigo-600 text-white scale-105' : 'bg-white border-transparent text-slate-500 hover:border-indigo-100'}`}>{label}</button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-8 flex-1">
-              <label className="text-[13px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4"><span className="w-3 h-3 bg-indigo-600 rounded-full"></span> {t.thoughtQuestion}</label>
-              <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-full min-h-[160px] p-8 bg-white/50 backdrop-blur-md rounded-[3rem] text-xl font-medium outline-none focus:ring-[12px] focus:ring-indigo-100 transition-all resize-none border-2 border-white focus:bg-white shadow-inner placeholder:text-slate-300" placeholder="..." />
+            <div className="space-y-4 flex-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Честный поток мыслей</label>
+              <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-full min-h-[120px] p-6 bg-white rounded-3xl text-lg outline-none focus:ring-4 focus:ring-indigo-100 transition-all resize-none shadow-sm" placeholder="..." />
             </div>
           </div>
-          <button onClick={proceedToNext} className={`w-full py-8 rounded-[2.5rem] font-black shadow-2xl uppercase text-sm tracking-[0.4em] transition-all active:scale-95 ${intermediateFeedback.bodySensation ? 'btn-primary text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.confirmBtn}</button>
+          <button onClick={proceedToNext} className={`w-full py-7 rounded-3xl font-black uppercase text-sm tracking-widest transition-all ${intermediateFeedback.bodySensation ? 'btn-primary text-white shadow-xl' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.confirmBtn}</button>
         </div>
       </Layout>
     );
@@ -327,39 +226,30 @@ const App: React.FC = () => {
   const scene = INITIAL_SCENES[state.currentSceneId];
   return (
     <Layout lang={lang} onLangChange={setLang}>
-      <div className={`space-y-10 scene-transition ${isTransitioning ? 'opacity-0 scale-95 blur-2xl' : 'opacity-100 scale-100 blur-0'}`}>
-        <div className="px-4 space-y-2">
-          <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-             <span>Step {state.history.length + 1} / {totalScenes}</span>
-             <span>{Math.round(currentProgress)}%</span>
-          </div>
-          <div className="h-2 w-full bg-indigo-100/50 rounded-full overflow-hidden border border-white">
-            <div className="h-full bg-indigo-600 progress-bar-fill rounded-full" style={{ width: `${currentProgress}%` }}></div>
+      <div className="space-y-8 animate-in fade-in duration-700">
+        <div className="flex justify-between items-end px-2">
+           <div className="space-y-1">
+              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic">Шаг {state.history.length + 1}</span>
+              <h2 className="text-3xl font-[900] text-slate-800 uppercase italic tracking-tighter leading-none">{getTranslation(t, scene.titleKey)}</h2>
+           </div>
+           <span className="text-[10px] font-black text-slate-300">{Math.round(currentProgress)}%</span>
+        </div>
+
+        <div className="relative rounded-[3rem] overflow-hidden aspect-[4/5] shadow-2xl border-4 border-white">
+          <img src={`https://picsum.photos/seed/${scene.id}_v3/800/1000`} alt="Scene" className="object-cover w-full h-full grayscale hover:grayscale-0 transition-all duration-1000" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent flex items-end p-8">
+            <p className="text-white text-xl leading-relaxed font-medium drop-shadow-md">{getTranslation(t, scene.descKey)}</p>
           </div>
         </div>
 
-        <div className="relative rounded-[4.5rem] overflow-hidden aspect-[3/4] shadow-3xl border-[16px] border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v${state.history.length}_HD/1200/1500`} alt="Scene" className="object-cover w-full h-full transition-transform duration-[12s] group-hover:scale-110 ease-out" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent flex flex-col justify-end p-8 pb-12">
-            <div className="space-y-4">
-              <div className="w-16 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
-              <h2 className="text-white font-[900] text-3xl tracking-tight leading-none uppercase">{getTranslation(t, scene.titleKey)}</h2>
-              <p className="text-white/95 text-lg leading-relaxed font-medium drop-shadow-md">{getTranslation(t, scene.descKey)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-5 px-1 pb-4">
+        <div className="grid gap-4">
           {scene.choices.map((choice) => (
             <button key={choice.id} onClick={() => {
-              playSound('click');
-              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy');
+              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
               setIntermediateFeedback({ text: getTranslation(t, choice.textKey), nextId: choice.nextSceneId, belief: choice.beliefKey, userReflection: "", bodySensation: "" });
-            }} className="choice-button w-full p-8 text-left rounded-[2.5rem] flex items-center bg-white shadow-2xl hover:shadow-indigo-100 border-2 border-white hover:border-indigo-100 group active:scale-[0.96] transition-all">
-              <span className="font-black text-lg text-slate-800 flex-1 leading-tight pr-4">{getTranslation(t, choice.textKey)}</span>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center ml-2 shrink-0 group-hover:bg-indigo-600 transition-all duration-300">
-                <span className="text-indigo-600 font-black text-xl group-hover:text-white">→</span>
-              </div>
+            }} className="w-full p-6 text-left rounded-3xl bg-white shadow-sm border-2 border-transparent hover:border-indigo-500 hover:shadow-indigo-100 transition-all group flex items-center justify-between">
+              <span className="font-bold text-lg text-slate-800 group-hover:text-indigo-600">{getTranslation(t, choice.textKey)}</span>
+              <span className="text-indigo-200 group-hover:translate-x-1 transition-transform">→</span>
             </button>
           ))}
         </div>

@@ -1,141 +1,137 @@
 
 export interface VectorState {
   foundation: number;
-  momentum: number;
-  space: number;
-  friction: number;
+  agency: number;
+  resource: number;
+  entropy: number;
 }
 
 export interface ProtocolStep {
   day: number;
-  type: 'CLEANUP' | 'STABILIZE' | 'EXPAND';
+  phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
   task: { ru: string; ka: string };
   method: { ru: string; ka: string };
-  metrics: { ru: string; ka: string };
+  targetMetric: { ru: string; ka: string };
 }
 
 export interface AnalysisResult {
   state: VectorState;
   integrity: number;
-  homeostasis: number;
-  potential: number;
+  capacity: number;
+  entropyScore: number;
+  systemHealth: number;
   phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
   archetype: { ru: string; ka: string; icon: string };
-  metaphorSummary: { ru: string; ka: string };
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
-  detectedViruses: string[];
+  bugs: string[];
 }
 
-const SCIENTIFIC_PROTOCOLS: Record<string, any[]> = {
-  CLEANUP: [
+const TASKS_DB: Record<string, any[]> = {
+  SANITATION: [
     {
-      task: { ru: "Детокс контактов", ka: "კონტაქტების დეტოქსი" },
-      method: { ru: "Идентифицировать 1 узел, запрашивающий ресурс без отдачи. Ограничить доступ на 48ч.", ka: "მოახდინეთ იდენტიფიცირება 1 კვანძის, რომელიც მოითხოვს რესურსს უკუგების გარეშე. შეზღუდეთ წვდომა 48 სთ-ით." },
-      metrics: { ru: "Снижение Энтропии на 0.05", ka: "ენტროპიის შემცირება 0.05-ით" }
+      task: { ru: "Ликвидация утечек", ka: "გაჟონვის ლიკვიდაცია" },
+      method: { ru: "Отписаться от 5 ненужных рассылок и 1 токсичного блогера сегодня.", ka: "დღესვე გამოიწერეთ 5 არასაჭირო გზავნილი და 1 ტოქსიკური ბლოგერი." },
+      targetMetric: { ru: "Снижение шума (Entropy) -5%", ka: "ხმაურის შემცირება -5%" }
     },
     {
-      task: { ru: "Финансовая Санация", ka: "ფინანსური სანაცია" },
-      method: { ru: "Найти автоматическую трату, которая не приносит пользы. Удалить.", ka: "იპოვეთ ავტომატური ხარჯი, რომელიც სარგებელს არ მოგიტანთ. წაშალეთ." },
-      metrics: { ru: "Рост Integrity +2%", ka: "Integrity-ს ზრდა +2%" }
+      task: { ru: "Ревизия границ", ka: "საზღვრების რევიზია" },
+      method: { ru: "Сказать 'нет' одной просьбе, которая нарушает ваш комфорт.", ka: "უთხარით 'არა' ერთ თხოვნას, რომელიც არღვევს თქვენს კომფორტს." },
+      targetMetric: { ru: "Рост Агентности +3%", ka: "აგენტურობის ზრდა +3%" }
     }
   ],
-  STABILIZE: [
+  STABILIZATION: [
     {
-      task: { ru: "Укрепление Контейнера", ka: "კონტეინერის გამაგრება" },
-      method: { ru: "Выполнить одно обязательство перед собой, данное более месяца назад.", ka: "შეასრულეთ ერთი პირობა საკუთარი თავის წინაშე, რომელიც ერთ თვეზე მეტი ხნის წინ დადეთ." },
-      metrics: { ru: "Рост Homeostasis +10%", ka: "Homeostasis-ის ზრდა +10%" }
+      task: { ru: "Фиксация прибыли", ka: "მოგების ფიქსაცია" },
+      method: { ru: "Отложить 10% от любого прихода в 'Фонд Устойчивости'.", ka: "გადადეთ ნებისმიერი შემოსავლის 10% 'მდგრადობის ფონდში'." },
+      targetMetric: { ru: "Рост Целостности +8%", ka: "მთლიანობის ზრდა +8%" }
     }
   ],
-  EXPAND: [
+  EXPANSION: [
     {
-      task: { ru: "Контролируемый Риск", ka: "კონტროლირებადი რისკი" },
-      method: { ru: "Инвестировать 1 час в изучение навыка, который пугает своим масштабом.", ka: "დააბანდეთ 1 საათი იმ უნარის შესწავლაში, რომელიც თავისი მასშტაბით გაშინებთ." },
-      metrics: { ru: "Рост Capacity +5%", ka: "Capacity-ს ზრდა +5%" }
+      task: { ru: "Инвестиция в масштаб", ka: "ინვესტიცია მასშტაბში" },
+      method: { ru: "Купить обучение или инструмент, который ускорит ваш результат в 2 раза.", ka: "შეიძინეთ ტრენინგი ან ინსტრუმენტი, რომელიც თქვენს შედეგს 2-ჯერ დააჩქარებს." },
+      targetMetric: { ru: "Рост Емкости +15%", ka: "ტევადობის ზრდა +15%" }
     }
   ]
 };
 
 export function calculateGenesisCore(history: any[]): AnalysisResult {
-  let f = 50, m = 50, s = 50, e = 15;
-  const viruses: string[] = [];
+  let f = 50, a = 50, r = 50, e = 15;
+  const bugs: string[] = [];
 
-  const weightMatrix: Record<string, any> = {
-    'fear_of_punishment': { f: -12, m: -4, s: -10, e: 22 },
-    'impulse_spend': { f: -8, m: 20, s: 12, e: 18 },
-    'money_is_danger': { f: -25, m: -10, s: -5, e: 30 },
-    'poverty_is_virtue': { f: 15, m: -20, s: -25, e: 8 },
-    'money_is_tool': { f: 10, m: 25, s: 15, e: -10 },
-    'self_permission': { f: 0, m: 15, s: 30, e: -15 },
-    'imposter_syndrome': { f: -10, m: -22, s: -15, e: 20 },
-    'hard_work_only': { f: 30, m: -5, s: -30, e: 15 },
-    'capacity_expansion': { f: 10, m: 22, s: 25, e: 5 },
-    'guilt_after_pleasure': { f: -15, m: -10, s: -25, e: 22 },
-    'family_loyalty': { f: 25, m: -15, s: -20, e: 10 }
+  const weights: Record<string, any> = {
+    'fear_of_punishment': { f: -15, a: -10, r: -5, e: 25 },
+    'impulse_spend': { f: -10, a: 5, r: 15, e: 20 },
+    'money_is_danger': { f: -30, a: -15, r: -5, e: 35 },
+    'poverty_is_virtue': { f: 10, a: -25, r: -30, e: 10 },
+    'money_is_tool': { f: 5, a: 25, r: 20, e: -10 },
+    'self_permission': { f: 0, a: 15, r: 35, e: -15 },
+    'imposter_syndrome': { f: -5, a: -30, r: -15, e: 25 },
+    'hard_work_only': { f: 25, a: -5, r: -35, e: 15 },
+    'capacity_expansion': { f: 10, a: 25, r: 25, e: 5 },
+    'family_loyalty': { f: 30, a: -15, r: -20, e: 12 }
   };
 
   history.forEach(h => {
-    const w = weightMatrix[h.beliefKey];
+    const w = weights[h.beliefKey];
     if (w) {
-      f = Math.max(0, Math.min(100, f + w.f));
-      m = Math.max(0, Math.min(100, m + w.m));
-      s = Math.max(0, Math.min(100, s + w.s));
-      e = Math.max(0, Math.min(100, e + w.e));
-      if (w.e > 15) viruses.push(h.beliefKey);
+      f = Math.max(5, Math.min(95, f + w.f));
+      a = Math.max(5, Math.min(95, a + w.a));
+      r = Math.max(5, Math.min(95, r + w.r));
+      e = Math.max(5, Math.min(95, e + w.e));
+      if (w.e > 15) bugs.push(h.beliefKey);
     }
   });
 
-  const imbalance = (Math.abs(f - m) + Math.abs(m - s) + Math.abs(s - f)) / 3;
-  const integrity = Math.round(((f + m + s) / 3) * (1 - e / 150) * (1 - imbalance / 150));
-  const homeostasis = Math.round(100 - imbalance - (e * 0.4));
-  const potential = Math.round((f + m + s) / 3 + integrity / 2);
+  const integrity = Math.round(((f + a + r) / 3) * (1 - e / 200));
+  const capacity = Math.round((f + r) / 2);
+  const systemHealth = Math.round((integrity * capacity) / (e + 1));
 
   let phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION' = 'SANITATION';
-  if (e < 20 && integrity > 50) phase = 'STABILIZATION';
-  if (integrity > 75 && homeostasis > 70) phase = 'EXPANSION';
+  if (e < 25 && integrity > 45) phase = 'STABILIZATION';
+  if (integrity > 70 && systemHealth > 50) phase = 'EXPANSION';
 
   let status: AnalysisResult['status'] = 'OPTIMAL';
-  if (integrity < 30) status = 'CRITICAL';
-  else if (integrity < 50) status = 'UNSTABLE';
-  else if (imbalance > 35) status = 'COMPENSATED';
+  if (systemHealth < 20) status = 'CRITICAL';
+  else if (systemHealth < 40) status = 'UNSTABLE';
+  else if (e > 40) status = 'COMPENSATED';
 
   const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
-    let pType: 'CLEANUP' | 'STABILIZE' | 'EXPAND' = 'CLEANUP';
-    if (phase === 'SANITATION') pType = 'CLEANUP';
-    else if (phase === 'STABILIZATION') pType = i % 2 === 0 ? 'STABILIZE' : 'CLEANUP';
-    else pType = i % 3 === 0 ? 'EXPAND' : 'STABILIZE';
+    let p = phase;
+    if (i < 2) p = 'SANITATION';
+    else if (i < 5 && phase !== 'SANITATION') p = 'STABILIZATION';
+    else if (phase === 'EXPANSION') p = 'EXPANSION';
+    else p = 'SANITATION';
 
-    const pool = SCIENTIFIC_PROTOCOLS[pType];
+    const pool = TASKS_DB[p];
     const item = pool[i % pool.length];
-    return { day: i + 1, type: pType, ...item };
+    return { day: i + 1, phase: p, ...item };
   });
 
-  const archetypes = {
+  const archs = {
     CRITICAL: { ru: "Разрушенный Узел", ka: "დანგრეული კვანძი", icon: "⚠️" },
-    UNSTABLE: { ru: "Адаптивный Скиталец", ka: "ადაპტური მოხეტე", icon: "🌑" },
-    COMPENSATED: { ru: "Жесткая Структура", ka: "მყარი სტრუქტურა", icon: "🛡️" },
+    UNSTABLE: { ru: "Хаотичная Система", ka: "ქაოტური სისტემა", icon: "🌀" },
+    COMPENSATED: { ru: "Жесткая Структура", ka: "ხისტი სტრუქტურა", icon: "🛡️" },
     OPTIMAL: { ru: "Архитектор Матрицы", ka: "მატრიცის არქიტექტორი", icon: "🏛️" }
   };
 
   return {
-    state: { foundation: f, momentum: m, space: s, friction: e },
+    state: { foundation: f, agency: a, resource: r, entropy: e },
     integrity,
-    homeostasis,
-    potential,
+    capacity,
+    entropyScore: e,
+    systemHealth,
     phase,
-    archetype: archetypes[status],
-    metaphorSummary: {
-      ru: status === 'CRITICAL' ? "Система в режиме выживания. Экспансия невозможна." : "Ядро синхронизировано. Доступен переход к следующей фазе.",
-      ka: status === 'CRITICAL' ? "სისტემა გადარჩენის რეჟიმშია. ექსპანსია შეუძლებელია." : "ბირთვი სინქრონიზებულია. ხელმისაწვდომია შემდეგ ფაზაზე გადასვლა."
-    },
+    archetype: archs[status],
+    roadmap,
     graphPoints: [
-      { x: 50, y: 50 - f/2 },
-      { x: 50 + s/2, y: 50 + s/4 },
-      { x: 50 - m/2, y: 50 + m/4 }
+      { x: 50, y: 50 - f / 2.2 },
+      { x: 50 + r / 2.2, y: 50 + r / 4 },
+      { x: 50 - a / 2.2, y: 50 + a / 4 }
     ],
     status,
-    roadmap,
-    detectedViruses: [...new Set(viruses)]
+    bugs: [...new Set(bugs)]
   };
 }

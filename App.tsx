@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layout } from './components/Layout.tsx';
-import { INITIAL_SCENES } from './constants.ts';
-import { Choice, GameState } from './types.ts';
-import { translations } from './translations.ts';
-import { getPsychologicalFeedback, textToSpeech, decodeBase64, playAudioBuffer, generateMindsetAnchor } from './services/geminiService.ts';
+import { Layout } from './components/Layout';
+import { INITIAL_SCENES } from './constants';
+import { Choice, GameState } from './types';
+import { translations } from './translations';
+import { getPsychologicalFeedback, textToSpeech, decodeBase64, playAudioBuffer, generateMindsetAnchor } from './services/geminiService';
 
 declare global {
   interface Window {

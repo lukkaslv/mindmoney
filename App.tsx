@@ -63,16 +63,18 @@ const App: React.FC = () => {
         
         let step = 0;
         const timer = setInterval(() => {
-          setLoadingStep(s => s + 1);
-          if (++step >= t.loadingSteps.length) {
+          setLoadingStep(s => (s + 1) % t.loadingSteps.length);
+          step++;
+          if (step >= t.loadingSteps.length * 2) {
             clearInterval(timer);
             setLoading(false);
             setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
           }
         }, 700);
       } catch (e) {
-        console.error(e);
+        console.error("Analysis Error:", e);
         setLoading(false);
+        window.Telegram?.WebApp?.showAlert?.("Error calculating feedback.");
       }
     } else {
       const nextId = intermediateFeedback.nextId;
@@ -110,7 +112,7 @@ const App: React.FC = () => {
             <div className="absolute inset-0 border-[12px] border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center text-4xl animate-bounce">🗝️</div>
           </div>
-          <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.4em] text-center h-12 flex items-center">{t.loadingSteps[loadingStep % t.loadingSteps.length]}</p>
+          <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.4em] text-center h-12 flex items-center">{t.loadingSteps[loadingStep]}</p>
         </div>
       </Layout>
     );
@@ -124,12 +126,12 @@ const App: React.FC = () => {
             <div className="relative z-10 space-y-6">
               <div className="flex justify-between items-start">
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.resultArchetype}</span>
-                <span className="text-[10px] font-black opacity-30">ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                <span className="text-[10px] font-black opacity-30">LUKA LAB PRO</span>
               </div>
               <h2 className="text-5xl font-[900] tracking-tighter leading-none italic">{(t as any).archetypes?.[analysisData.archetypeKey] || analysisData.archetypeKey}</h2>
               <div className="pt-4 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase">Сценарий: {(t.scenarios as any)[analysisData.scenarioKey]}</span>
-                <span className="px-4 py-2 bg-white/10 rounded-full text-[9px] font-black uppercase">Ловушка: {(t.traps as any)[analysisData.trapKey]}</span>
+                <span className="px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase">{(t.scenarios as any)[analysisData.scenarioKey]}</span>
+                <span className="px-4 py-2 bg-white/10 rounded-full text-[9px] font-black uppercase">{(t.traps as any)[analysisData.trapKey]}</span>
               </div>
             </div>
             <div className="absolute -bottom-10 -right-10 text-[12rem] opacity-[0.03] font-black rotate-12 select-none pointer-events-none">LUKA</div>
@@ -228,7 +230,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="relative rounded-[4rem] overflow-hidden aspect-[4/5] shadow-4xl border-[10px] border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v4/900/1200`} alt="Scene" className="object-cover w-full h-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
+          <img src={`https://picsum.photos/seed/${scene.id}_v5/900/1200`} alt="Scene" className="object-cover w-full h-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex items-end p-10">
             <p className="text-white text-2xl leading-relaxed font-medium drop-shadow-xl">{getTranslation(t, scene.descKey)}</p>
           </div>

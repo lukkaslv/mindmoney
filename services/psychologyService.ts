@@ -3,11 +3,11 @@ export interface AnalysisResult {
   archetypeKey: string;
   patternKey: string;
   trapKey: string;
-  scenarioKey: string; // Новый уровень: комплексный жизненный сценарий
+  scenarioKey: string;
   scoreSafety: number;
   scorePermission: number;
   scoreAmbition: number;
-  stressLevel: number; // Для динамического UI
+  stressLevel: number;
   levels: {
     safety: 'low' | 'mid' | 'high';
     permission: 'low' | 'mid' | 'high';
@@ -18,10 +18,9 @@ export interface AnalysisResult {
     thought: string;
     sensation: string;
     insight: string;
-    confrontation: string; // Прямая провокация от системы
+    confrontation: string;
   }[];
   analysisTextKeys: string[];
-  // Fix: Added defenseMechanisms to the interface to resolve the error in getPsychologicalFeedback
   defenseMechanisms: string[];
   roadmap: {
     title: string;
@@ -70,7 +69,13 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
       ambition = Math.max(0, Math.min(100, ambition + t.a));
       traits.push(item.beliefKey);
       
-      const confKey = `${item.beliefKey}_${item.bodySensation === 'Ком в горле' || item.bodySensation === 'ბურთი ყელში' ? 'throat' : item.bodySensation === 'Прилив тепла' || item.bodySensation === 'სითბოს მოზღვავება' ? 'warmth' : item.bodySensation === 'Груз на плечах' || item.bodySensation === 'სიმძიმე მხრებზე' ? 'shoulders' : 'none'}`;
+      const s = item.bodySensation || "";
+      const sKey = (s.includes('горле') || s.includes('ყელში')) ? 'throat' :
+                   (s.includes('тепла') || s.includes('სითბოს')) ? 'warmth' :
+                   (s.includes('Холод') || s.includes('სიცივე')) ? 'cold' :
+                   (s.includes('плечах') || s.includes('მხრებზე')) ? 'shoulders' : 'none';
+
+      const confKey = `${item.beliefKey}_${sKey}`;
 
       reflectionMirror.push({
         sceneTitle: scenes[item.sceneId]?.titleKey || "",
@@ -88,7 +93,6 @@ export async function getPsychologicalFeedback(history: any[], scenes: any): Pro
     ambition: getLevel(ambition)
   };
 
-  // Определение комплексного сценария
   let scenario = "stable_path";
   if (levels.safety === 'low' && levels.ambition === 'high') scenario = "sacrifice_run";
   if (levels.permission === 'low' && levels.safety === 'high') scenario = "invisible_wealth";

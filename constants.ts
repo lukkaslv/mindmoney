@@ -92,9 +92,19 @@ export const MODULE_REGISTRY: Record<string, Record<string, Scene>> = {
       titleKey: 'scenes.visibility.title',
       descKey: 'scenes.visibility.desc',
       choices: [
-        { id: 'v1', textKey: 'scenes.visibility.c1', beliefKey: 'shame_of_success', nextSceneId: 'end' },
-        { id: 'v2', textKey: 'scenes.visibility.c2', beliefKey: 'imposter_syndrome', nextSceneId: 'end' },
-        { id: 'v3', textKey: 'scenes.visibility.c3', beliefKey: 'capacity_expansion', nextSceneId: 'end' }
+        { id: 'v1', textKey: 'scenes.visibility.c1', beliefKey: 'shame_of_success', nextSceneId: 'shame_success' },
+        { id: 'v2', textKey: 'scenes.visibility.c2', beliefKey: 'imposter_syndrome', nextSceneId: 'shame_success' },
+        { id: 'v3', textKey: 'scenes.visibility.c3', beliefKey: 'capacity_expansion', nextSceneId: 'shame_success' }
+      ]
+    },
+    shame_success: {
+      id: 'shame_success',
+      titleKey: 'scenes.shame_success.title',
+      descKey: 'scenes.shame_success.desc',
+      choices: [
+        { id: 'ss1', textKey: 'scenes.shame_success.c1', beliefKey: 'poverty_is_virtue', nextSceneId: 'end' },
+        { id: 'ss2', textKey: 'scenes.shame_success.c2', beliefKey: 'fear_of_punishment', nextSceneId: 'end' },
+        { id: 'ss3', textKey: 'scenes.shame_success.c3', beliefKey: 'self_permission', nextSceneId: 'end' }
       ]
     }
   },
@@ -104,9 +114,19 @@ export const MODULE_REGISTRY: Record<string, Record<string, Scene>> = {
       titleKey: 'scenes.social_conflict.title',
       descKey: 'scenes.social_conflict.desc',
       choices: [
-        { id: 'sc1', textKey: 'scenes.social_conflict.c1', beliefKey: 'fear_of_power', nextSceneId: 'end' },
-        { id: 'sc2', textKey: 'scenes.social_conflict.c2', beliefKey: 'self_permission', nextSceneId: 'end' },
-        { id: 'sc3', textKey: 'scenes.social_conflict.c3', beliefKey: 'money_is_tool', nextSceneId: 'end' }
+        { id: 'sc1', textKey: 'scenes.social_conflict.c1', beliefKey: 'fear_of_power', nextSceneId: 'betrayal' },
+        { id: 'sc2', textKey: 'scenes.social_conflict.c2', beliefKey: 'self_permission', nextSceneId: 'betrayal' },
+        { id: 'sc3', textKey: 'scenes.social_conflict.c3', beliefKey: 'money_is_tool', nextSceneId: 'betrayal' }
+      ]
+    },
+    betrayal: {
+      id: 'betrayal',
+      titleKey: 'scenes.social_betrayal.title',
+      descKey: 'scenes.social_betrayal.desc',
+      choices: [
+        { id: 'sb1', textKey: 'scenes.social_betrayal.c1', beliefKey: 'short_term_bias', nextSceneId: 'end' },
+        { id: 'sb2', textKey: 'scenes.social_betrayal.c2', beliefKey: 'fear_of_conflict', nextSceneId: 'end' },
+        { id: 'sb3', textKey: 'scenes.social_betrayal.c3', beliefKey: 'betrayal_trauma', nextSceneId: 'end' }
       ]
     }
   },
@@ -116,9 +136,19 @@ export const MODULE_REGISTRY: Record<string, Record<string, Scene>> = {
       titleKey: 'scenes.legacy_vision.title',
       descKey: 'scenes.legacy_vision.desc',
       choices: [
-        { id: 'v1', textKey: 'scenes.legacy_vision.c1', beliefKey: 'short_term_bias', nextSceneId: 'end' },
-        { id: 'v2', textKey: 'scenes.legacy_vision.c2', beliefKey: 'family_loyalty', nextSceneId: 'end' },
-        { id: 'v3', textKey: 'scenes.legacy_vision.c3', beliefKey: 'capacity_expansion', nextSceneId: 'end' }
+        { id: 'v1', textKey: 'scenes.legacy_vision.c1', beliefKey: 'short_term_bias', nextSceneId: 'sacrifice' },
+        { id: 'v2', textKey: 'scenes.legacy_vision.c2', beliefKey: 'family_loyalty', nextSceneId: 'sacrifice' },
+        { id: 'v3', textKey: 'scenes.legacy_vision.c3', beliefKey: 'capacity_expansion', nextSceneId: 'sacrifice' }
+      ]
+    },
+    sacrifice: {
+      id: 'sacrifice',
+      titleKey: 'scenes.legacy_sacrifice.title',
+      descKey: 'scenes.legacy_sacrifice.desc',
+      choices: [
+        { id: 'ls1', textKey: 'scenes.legacy_sacrifice.c1', beliefKey: 'short_term_bias', nextSceneId: 'end' },
+        { id: 'ls2', textKey: 'scenes.legacy_sacrifice.c2', beliefKey: 'ancestral_debt', nextSceneId: 'end' },
+        { id: 'ls3', textKey: 'scenes.legacy_sacrifice.c3', beliefKey: 'capacity_expansion', nextSceneId: 'end' }
       ]
     }
   }

@@ -15,9 +15,14 @@ export interface Scene {
 }
 
 export interface GameHistoryItem {
-  sceneId: string; 
-  choiceKey: string; 
   beliefKey: string;
-  userReflection?: string;
-  bodySensation?: string;
+  sensation: string;
+}
+
+export interface Node {
+  id: number;
+  domain: 'foundation' | 'agency' | 'money' | 'social' | 'legacy';
+  active: boolean;
+  done: boolean;
+  linkedTo?: number[];
 }

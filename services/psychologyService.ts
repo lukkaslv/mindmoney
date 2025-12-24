@@ -1,144 +1,117 @@
 
-export interface LatticeEdge {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  stress: number;
-}
+export interface Vector3 { x: number; y: number; z: number; }
 
-export interface RoadmapStep {
-  titleKey: string;
-  descKey: string;
-  homeworkKey: string;
+export interface RoadmapAction {
+  id: string;
+  domain: 'body' | 'mind' | 'action';
+  instruction: string;
+  scientificBasis: string;
 }
 
 export interface AnalysisResult {
   archetypeKey: string;
-  scenarioKey: string;
-  resistanceLevel: number;
-  coherenceScore: number;
-  elasticityIndex: number; // 0-100 (Насколько система выдержит рост)
-  lattice: LatticeEdge[];
-  reflectionMirror: any[];
+  entropy: number; // 0-1 (уровень хаоса/противоречий)
+  kineticPotential: number; // Скорость возможного роста (0-100)
+  integrityScore: number; // Общая связность системы
+  fractureLimit: number; // Предел прочности (в условных единицах нагрузки)
+  lattice: any[];
   stats: { safety: number; power: number; permission: number };
-  roadmap: RoadmapStep[];
+  prescription: RoadmapAction[];
+  vectorField: Vector3[];
 }
 
-const BODY_MAP: Record<string, { s: number, p: number, a: number }> = {
-  'throat': { s: -0.5, p: -0.8, a: -0.2 },
-  'chest': { s: -0.3, p: -0.2, a: -0.7 },
-  'stomach': { s: -0.9, p: -0.1, a: -0.1 },
-  'shoulders': { s: -0.2, p: -0.6, a: 0.2 },
-  'warmth': { s: 0.6, p: 0.8, a: 0.9 },
-  'none': { s: 0, p: 0, a: 0 }
+const DOMAIN_MULTIPLIERS = {
+  SAFETY: 1.4,
+  PERMIT: 1.2,
+  POWER: 1.0
 };
 
-const BELIEF_MAP: Record<string, { s: number, p: number, a: number }> = {
-  'capacity_expansion': { s: 0.2, p: 0.5, a: 1.0 },
-  'self_permission': { s: 0.3, p: 1.0, a: 0.4 },
-  'money_is_tool': { s: 0.8, p: 0.4, a: 0.4 },
-  'imposter_syndrome': { s: -0.2, p: -0.8, a: 0.1 },
-  'money_is_danger': { s: -1.0, p: -0.2, a: -0.4 },
-  'poverty_is_virtue': { s: 0.4, p: -1.0, a: -0.6 }
-};
-
-export async function getPsychologicalFeedback(history: any[], scenes: any): Promise<AnalysisResult> {
-  let s = 50, p = 50, a = 50;
-  let points: {x: number, y: number, stress: number}[] = [{x: 50, y: 50, stress: 0}];
-  let totalCurvature = 0;
-  let maxStressPoint = 0;
+export async function getPsychologicalFeedback(history: any[]): Promise<AnalysisResult> {
+  let s = 40, p = 40, a = 40;
+  let entropySum = 0;
+  let coherencePoints = 0;
   
-  const processed = history.map((h, i) => {
-    const bWeights = BELIEF_MAP[h.beliefKey] || { s: 0, p: 0, a: 0 };
-    const bodyStr = h.bodySensation || "";
-    let bKey = 'none';
-    if (bodyStr.includes('горле') || bodyStr.includes('ყელში')) bKey = 'throat';
-    else if (bodyStr.includes('тепла') || bodyStr.includes('სითბოს')) bKey = 'warmth';
-    else if (bodyStr.includes('Холод') || bodyStr.includes('სიცივე')) bKey = 'stomach';
-    else if (bodyStr.includes('плечах') || bodyStr.includes('მხрებზე')) bKey = 'shoulders';
-    else if (bodyStr.includes('груди') || bodyStr.includes('მკერდში')) bKey = 'chest';
-    
-    const bodyWeights = BODY_MAP[bKey];
-    const dotProduct = (bWeights.s * bodyWeights.s) + (bWeights.p * bodyWeights.p) + (bWeights.a * bodyWeights.a);
-    const stress = dotProduct < 0 ? Math.abs(dotProduct) : 0;
-    
-    totalCurvature += stress;
-    if (stress > maxStressPoint) maxStressPoint = stress;
+  // Математические веса для соматики и убеждений
+  const weights = {
+    'throat': { s: -0.1, p: -0.8, a: -0.1, e: 0.9 },
+    'stomach': { s: -1.0, p: -0.1, a: -0.1, e: 1.0 },
+    'warmth': { s: 0.5, p: 0.6, a: 0.8, e: 0.1 },
+    'chest': { s: -0.2, p: -0.3, a: -0.9, e: 0.7 },
+    'none': { s: 0, p: 0, a: 0, e: 0.5 }
+  };
 
-    s = Math.max(10, Math.min(100, s + (bWeights.s * 15) + (bodyWeights.s * 5)));
-    p = Math.max(10, Math.min(100, p + (bWeights.p * 15) + (bodyWeights.p * 5)));
-    a = Math.max(10, Math.min(100, a + (bWeights.a * 15) + (bodyWeights.a * 5)));
+  const beliefImpact = {
+    'capacity_expansion': { s: 0.1, p: 0.4, a: 1.2 },
+    'self_permission': { s: 0.2, p: 1.2, a: 0.3 },
+    'money_is_tool': { s: 0.8, p: 0.3, a: 0.3 },
+    'money_is_danger': { s: -1.2, p: -0.2, a: -0.5 },
+    'imposter_syndrome': { s: -0.1, p: -1.0, a: 0.2 }
+  };
 
-    const angle = (i / history.length) * Math.PI * 2;
-    const radius = 15 + (s + p + a) / 8;
-    points.push({ x: 50 + Math.cos(angle) * radius, y: 50 + Math.sin(angle) * radius, stress });
+  const processed = history.map((step, i) => {
+    const b = beliefImpact[step.beliefKey as keyof typeof beliefImpact] || { s: 0, p: 0, a: 0 };
+    const bodyKey = step.bodySensation?.includes('горле') ? 'throat' :
+                    step.bodySensation?.includes('Холод') ? 'stomach' :
+                    step.bodySensation?.includes('тепла') ? 'warmth' :
+                    step.bodySensation?.includes('груди') ? 'chest' : 'none';
+    const body = weights[bodyKey as keyof typeof weights];
 
-    return { ...h, stress };
+    // Расчет локального конфликта (энтропии)
+    // Если выбор направлен на рост (a > 0), а тело на сжатие (body.a < 0), энтропия растет
+    const conflict = (b.a > 0 && body.a < 0) || (b.s > 0 && body.s < 0) ? body.e : body.e * 0.5;
+    entropySum += conflict;
+
+    s = Math.max(0, Math.min(100, s + b.s * 15 + body.s * 8));
+    p = Math.max(0, Math.min(100, p + b.p * 15 + body.p * 8));
+    a = Math.max(0, Math.min(100, a + b.a * 15 + body.a * 8));
+
+    return { conflict, s, p, a };
   });
 
-  const lattice: LatticeEdge[] = [];
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
-      const dist = Math.sqrt(Math.pow(points[i].x - points[j].x, 2) + Math.pow(points[i].y - points[j].y, 2));
-      if (dist < 40) {
-        lattice.push({
-          x1: points[i].x, y1: points[i].y,
-          x2: points[j].x, y2: points[j].y,
-          stress: (points[i].stress + points[j].stress) / 2
-        });
-      }
-    }
-  }
+  const finalEntropy = Math.min(1, entropySum / history.length);
+  const integrity = Math.round((1 - finalEntropy) * 100);
+  const kinetic = Math.round((a * (1 - finalEntropy)));
+  const fracture = Math.round(s * DOMAIN_MULTIPLIERS.SAFETY * (1 - finalEntropy));
 
-  const coherence = Math.max(0, 100 - (totalCurvature * 15));
-  const elasticity = Math.round((coherence * s) / 100); // Формула: Целостность * Базовая безопасность
-
-  const stats = { safety: Math.round(s), power: Math.round(a), permission: Math.round(p) };
-
-  // Генерация Дорожной Карты (Roadmap)
-  const roadmap: RoadmapStep[] = [];
+  // Рецептурный план (Prescription)
+  const prescription: RoadmapAction[] = [];
   
-  // Шаг 1: Фундамент (на основе Safety)
-  if (stats.safety < 60) {
-    roadmap.push({ titleKey: 'roadmap.safety.title', descKey: 'roadmap.safety.desc', homeworkKey: 'roadmap.safety.hw' });
-  } else {
-    roadmap.push({ titleKey: 'roadmap.stabilization.title', descKey: 'roadmap.stabilization.desc', homeworkKey: 'roadmap.stabilization.hw' });
+  if (finalEntropy > 0.6) {
+    prescription.push({
+      id: 'e_1',
+      domain: 'mind',
+      instruction: 'Мораторий на новые проекты на 14 дней. Ваша система в состоянии дефолта.',
+      scientificBasis: 'Высокая психическая энтропия блокирует когнитивные функции префронтальной коры.'
+    });
   }
 
-  // Шаг 2: Разрешение (на основе Permission)
-  if (stats.permission < 60) {
-    roadmap.push({ titleKey: 'roadmap.permission.title', descKey: 'roadmap.permission.desc', homeworkKey: 'roadmap.permission.hw' });
-  } else {
-    roadmap.push({ titleKey: 'roadmap.pleasure.title', descKey: 'roadmap.pleasure.desc', homeworkKey: 'roadmap.pleasure.hw' });
+  if (s < 50) {
+    prescription.push({
+      id: 's_1',
+      domain: 'body',
+      instruction: 'Ежедневная практика "Вес тела". 10 минут ощущать давление стоп в пол.',
+      scientificBasis: 'Стимуляция проприоцепции для снижения уровня кортизола и активации парасимпатики.'
+    });
   }
 
-  // Шаг 3: Масштаб (на основе Power)
-  if (stats.power < 60) {
-    roadmap.push({ titleKey: 'roadmap.power.title', descKey: 'roadmap.power.desc', homeworkKey: 'roadmap.power.hw' });
-  } else {
-    roadmap.push({ titleKey: 'roadmap.dominance.title', descKey: 'roadmap.dominance.desc', homeworkKey: 'roadmap.dominance.hw' });
+  if (p < 50) {
+    prescription.push({
+      id: 'p_1',
+      domain: 'action',
+      instruction: 'Микро-трата "Запрещенное удовольствие" (до 5% дохода) без обоснования пользы.',
+      scientificBasis: 'Разрыв нейронной связи "Радость = Вина" через дофаминовую стимуляцию.'
+    });
   }
-
-  let archetype = "observer";
-  if (stats.power > 75 && coherence < 50) archetype = "achiever";
-  else if (stats.permission < 40 && stats.safety > 60) archetype = "keeper";
-  else if (stats.power > 70 && stats.permission > 70) archetype = "expander";
-  else if (stats.safety < 35) archetype = "prisoner";
 
   return {
-    archetypeKey: archetype,
-    scenarioKey: stats.safety > 50 ? "stable_path" : "constant_crisis",
-    resistanceLevel: Math.round(totalCurvature * 20),
-    coherenceScore: Math.round(coherence),
-    elasticityIndex: elasticity,
-    lattice,
-    stats,
-    reflectionMirror: processed.slice(-3).map(p => ({
-      sceneTitle: scenes[p.sceneId]?.titleKey,
-      thought: p.userReflection,
-      isConflict: p.stress > 0.3
-    })),
-    roadmap
+    archetypeKey: a > 70 ? 'expander' : (s < 40 ? 'prisoner' : 'observer'),
+    entropy: finalEntropy,
+    kineticPotential: kinetic,
+    integrityScore: integrity,
+    fractureLimit: fracture,
+    stats: { safety: Math.round(s), power: Math.round(a), permission: Math.round(p) },
+    lattice: [], // Решетка генерируется на фронте
+    prescription,
+    vectorField: []
   };
 }

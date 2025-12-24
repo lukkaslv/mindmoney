@@ -2,210 +2,174 @@
 export const translations = {
   ru: {
     title: "Luka Sulava 💎",
-    subtitle: "Premium Psychology Lab",
-    enterPassword: "Код доступа",
-    accessBtn: "Войти в систему",
-    wrongPassword: "Код не принят",
+    subtitle: "Mental Architecture Engine",
+    enterPassword: "Initialize Matrix",
+    accessBtn: "Вход в систему",
+    wrongPassword: "Invalid Access Key",
     loadingSteps: [
-      "Сканирование подсознания...",
-      "Деконструкция убеждений...",
-      "Сборка Identity-кристалла...",
-      "Финальная калибровка..."
+      "Анализ психической энтропии...",
+      "Дешифровка соматических маркеров...",
+      "Сборка вектора масштабирования...",
+      "Финальная калибровка ядра..."
     ],
     reflectionTitle: "Диагностика",
-    reflectionSubtitle: "Честный взгляд внутрь",
-    bodyQuestion: "Где в теле живет этот выбор?",
-    thoughtQuestion: "Мысль, которую вы боитесь произнести",
-    confirmBtn: "Зафиксировать состояние",
-    resultArchetype: "Архетип вашей емкости",
-    resultAnalysis: "Кристалл Идентичности",
-    resultRoadmap: "Стратегия трансформации",
+    reflectionSubtitle: "Сканирование паттернов",
+    bodyQuestion: "Соматический отклик системы:",
+    thoughtQuestion: "Ментальный конфликт (скрытая мысль):",
+    confirmBtn: "Подтвердить данные",
+    resultArchetype: "Профиль идентичности",
+    resultAnalysis: "Structural Matrix",
+    resultRoadmap: "Prescription Plan",
     reflectionMirrorTitle: "Зеркало реакций",
-    bookBtn: "Личный разбор с Лукой",
-    restartBtn: "Начать новую сессию",
+    bookBtn: "Human Review",
+    restartBtn: "Recalibrate",
     statsLabels: {
-      safety: "Безопасность",
-      permission: "Позволение",
-      ambition: "Масштаб"
+      safety: "Stability",
+      permission: "Permit",
+      power: "Kinetic"
     },
     scenarios: {
-      stable_path: "Стабильный рост",
-      constant_crisis: "Перманентный кризис"
+      stable_path: "Linear Growth",
+      constant_crisis: "Entropy Cycle"
     },
     traps: {
-      none: "Чистый путь",
-      anxious_achievement: "Ловушка достижений"
+      none: "Clean State",
+      anxious_achievement: "Stress Peak"
     },
     archetypes: {
-      achiever: "Достигатор на износе",
-      keeper: "Хранитель дефицита",
-      prisoner: "Узник выживания",
-      expander: "Мастер расширения",
-      observer: "Наблюдатель-скептик"
+      achiever: "High-Entropy Achiever",
+      keeper: "Structural Guard",
+      prisoner: "System Prisoner",
+      expander: "Kinetic Master",
+      observer: "Passive Observer"
     },
     bodySensations: {
-      throat: "Ком в горле",
-      chest: "Давление в груди",
-      stomach: "Холод в животе",
-      shoulders: "Тяжесть на плечах",
-      warmth: "Прилив тепла",
-      none: "Пустота/Онемение"
+      throat: "Throat Block",
+      chest: "Chest Pressure",
+      stomach: "Visceral Cold",
+      shoulders: "Spinal Weight",
+      warmth: "Thermal Flow",
+      none: "Neural Numbness"
     },
     confrontations: {
-      confront_voice_block: "Вы затыкаете себе рот, когда речь идет о деньгах. Тело помнит запрет.",
-      confront_expansion_glow: "Это предвкушение силы. Вы на верном пути расширения.",
-      confront_default: "Интересная реакция. Кажется, вы нашли точку роста."
+      confront_voice_block: "Система блокирует речевой выход. Риск подавленной агрессии.",
+      confront_expansion_glow: "Оптимальный уровень проводимости. Рост подтвержден телом.",
+      confront_default: "Требуется калибровка вектора."
     },
     roadmapPaths: {
-      "roadmap.safety.title": "Фаза 0: Проработка Выживания",
-      "roadmap.safety.desc": "Ваша система находится в режиме дефицита. Любой рост будет саботирован страхом голода.",
-      "roadmap.safety.hw": "Заведите физическую 'подушку' (наличность), которую запрещено тратить. Приучите тело к ощущению 'Деньги есть физически'.",
-      "roadmap.stabilization.title": "Фаза 1: Укрепление Структуры",
-      "roadmap.stabilization.desc": "У вас хороший фундамент, пора переходить от 'защиты' к 'планированию'.",
-      "roadmap.stabilization.hw": "Делегируйте одну мелкую задачу, которую вы делаете из страха контроля. Освободите ментальное пространство.",
-      "roadmap.permission.title": "Фаза 2: Легализация Желаний",
-      "roadmap.permission.desc": "Вы умеете зарабатывать, но не умеете владеть. Запрет на радость блокирует энергию.",
-      "roadmap.permission.hw": "Потратьте 5% от текущего дохода на 'бессмысленную роскошь', которая вызывает детский восторг. Без чувства вины.",
-      "roadmap.pleasure.title": "Фаза 2: Расширение Емкости",
-      "roadmap.pleasure.desc": "Ваше позволение на высоком уровне. Пора повышать стандарты окружения.",
-      "roadmap.pleasure.hw": "Проведите день в месте, которое пока кажется вам 'слишком дорогим'. Просто побудьте там, привыкая к запаху и свету.",
-      "roadmap.power.title": "Фаза 3: Вход в Масштаб",
-      "roadmap.power.desc": "Вы готовы к большим цифрам, но боитесь ответственности, которую они несут.",
-      "roadmap.power.hw": "Напишите план действий на случай, если ваш доход вырастет в 10 раз за месяц. У кого вы попросите помощи? Кто станет вашей опорой?",
-      "roadmap.dominance.title": "Фаза 4: Мастерство Системы",
-      "roadmap.dominance.desc": "Вы — экспандер. Ваша задача — создавать смыслы, а не просто прибыль.",
-      "roadmap.dominance.hw": "Начните менторство или создайте проект, где вы делитесь философией, а не только инструментами. Масштабируйте влияние."
+      "protocols.title": "Prescription Plan"
     },
     scenes: {
       welcome: {
-        title: "Внезапный дар",
-        desc: "На ваш счет поступил миллион. Каков первый импульс?",
-        c1: "Замереть. Это ловушка.",
-        c2: "Действовать. На желания.",
-        c3: "Принять. Это мой результат."
+        title: "Sudden Asset",
+        desc: "На ваш счет поступил миллион. Первичная реакция системы?",
+        c1: "Panic/Freeze",
+        c2: "Impulse Action",
+        c3: "Strategic Acceptance"
       },
       dinner: {
-        title: "Токсичный фон",
-        desc: "В компании говорят: 'Все богатые — воры'. Вы чувствуете...",
-        c1: "Сжатие. Промолчать.",
-        c2: "Протест. Доказать обратное.",
-        c3: "Наблюдение. Это их блоки."
+        title: "Social Bias",
+        desc: "В компании звучит фраза: 'Большие деньги — это грязь'. Ваше поле...",
+        c1: "Contraction",
+        c2: "Active Defense",
+        c3: "Neutral Observation"
       },
       debt: {
-        title: "Границы ресурса",
-        desc: "Родственник просит сумму, нарушающую планы. Отказ приведет к обиде.",
-        c1: "Сдача. Отдам через вину.",
-        c2: "Конфликт. Откажу резко.",
-        c3: "Выбор. Откажу из любви к себе."
+        title: "Resource Limit",
+        desc: "Близкий просит в долг критичную для вас сумму. Внутренняя динамика?",
+        c1: "Sacrifice/Guilt",
+        c2: "Aggressive Refusal",
+        c3: "Identity Bound"
       },
       promotion: {
-        title: "Вертикаль власти",
-        desc: "Вас зовут на пост главы. Власть огромна, как и риск.",
-        c1: "Отказ. Не готов к давлению.",
-        c2: "Штурм. Буду работать на износ.",
-        c3: "Интеграция. Приму как игру."
+        title: "Power Vertical",
+        desc: "Вам предлагают пост с огромной ответственностью. Тело говорит...",
+        c1: "Avoidance",
+        c2: "Hyper-Focus",
+        c3: "Natural Alignment"
       },
       error: {
-        title: "Теневая выгода",
-        desc: "Вы нашли способ не платить налог без риска. Что внутри?",
-        c1: "Тревога. Я буду знать.",
-        c2: "Азарт. Это компенсация.",
-        c3: "Чистота. Выберу легальный путь."
+        title: "Shadow Gain",
+        desc: "Возможность получить сверхприбыль, нарушив этику. Что в ядре?",
+        c1: "Total Fear",
+        c2: "Excitation",
+        c3: "Moral Integrity"
       },
       investment: {
-        title: "Точка риска",
-        desc: "Инвестиция в идею, которая может обнулить ваш счет.",
-        c1: "Сохранение. Только скучные инструменты.",
-        c2: "Ва-банк. Всё или ничего.",
-        c3: "Расчет. Вложу долю."
+        title: "Risk Vector",
+        desc: "Инвестиция, которая может обнулить вас или умножить в 100 раз.",
+        c1: "Stagnation",
+        c2: "Blind Gamble",
+        c3: "Calculated Force"
       },
       shopping: {
-        title: "Зеркало роскоши",
-        desc: "Вы входите в бутик, где вещь стоит как авто. Взгляд консультанта...",
-        c1: "Оценивающий. Мне неуместно.",
-        c2: "Вызывающий. Куплю назло.",
-        c3: "Нейтральный. Я здесь хозяин выбора."
+        title: "Status Mirror",
+        desc: "Вы покупаете вещь за 10 годовых зарплат. Ощущение кожи?",
+        c1: "Alienation",
+        c2: "Validation Seek",
+        c3: "Actual Reality"
       },
       legacy: {
-        title: "Финал и начало",
-        desc: "Ваш доход вырос в 10 раз. Друзья детства перестали звонить.",
-        c1: "Откат. Вернуться назад.",
-        c2: "Изоляция. Уйду к таким же богатым.",
-        c3: "Эволюция. Приму рост."
+        title: "Final Evolution",
+        desc: "Вы стали тем, кем мечтали. Старое окружение исчезло. Ваша целостность?",
+        c1: "Regression",
+        c2: "Isolation",
+        c3: "Integration"
       }
     }
   },
   ka: {
     title: "Luka Sulava 💎",
-    subtitle: "პრემიუმ ფსიქოლოგიის ლაბორატორია",
-    enterPassword: "წვდომის კოდი",
-    accessBtn: "სისტემაში შესვლა",
-    wrongPassword: "კოდი არასწორია",
+    subtitle: "Mental Architecture Engine",
+    enterPassword: "Initialize Matrix",
+    accessBtn: "შესვლა",
+    wrongPassword: "Invalid Access Key",
     loadingSteps: [
-      "ქვეცნობიერის სკანირება...",
-      "რწმენების დეკონსტრუქცია...",
-      "იდენტობის კრისტალის აწყობა...",
-      "ფინალური კალიბრაცია..."
+      "ენთროპიის ანალიზი...",
+      "სომატური მარკერების დეშიფრაცია...",
+      "კალიბრაცია..."
     ],
     reflectionTitle: "დიაგნოსტიკა",
-    reflectionSubtitle: "გულწრფელი მზერა შიგნით",
-    bodyQuestion: "სად ცხოვრობს ეს არჩევანი სხეულში?",
-    thoughtQuestion: "აზრი, რომლის წარმოთქმისაც გეშინიათ",
-    confirmBtn: "მდგომარეობის დაფიქსირება",
-    resultArchetype: "თქვენი შესაძლებლობის არქეტიპი",
-    resultAnalysis: "იდენტობის კრისტალი",
-    resultRoadmap: "ტრანსფორმაციის სტრატეგია",
-    reflectionMirrorTitle: "რეაქციების სარკე",
-    bookBtn: "პირადი სესია ლუკასთან",
-    restartBtn: "ახალი სესიის დაწყება",
+    reflectionSubtitle: "სკანირება",
+    bodyQuestion: "სომატური პასუხი:",
+    thoughtQuestion: "მენტალური კონფლიქტი:",
+    confirmBtn: "დადასტურება",
+    resultArchetype: "იდენტობის პროფილი",
+    resultAnalysis: "Structural Matrix",
+    resultRoadmap: "Prescription Plan",
+    reflectionMirrorTitle: "სარკე",
+    bookBtn: "Human Review",
+    restartBtn: "Recalibrate",
     statsLabels: {
-      safety: "უსაფრთხოება",
-      permission: "ნებადართვა",
-      ambition: "მასშტაბი"
-    },
-    scenarios: {
-      stable_path: "სტაბილური ზრდა",
-      constant_crisis: "პერმანენტული კრიზისი"
-    },
-    traps: {
-      none: "სუფთა გზა",
-      anxious_achievement: "მიღწევების ხაფანგი"
+      safety: "Stability",
+      permission: "Permit",
+      power: "Kinetic"
     },
     archetypes: {
-      achiever: "გადამწვარი მიღწევადი",
-      keeper: "დეფიციტის მცველი",
-      prisoner: "გადარჩენის ტყვე",
-      expander: "გაფართოების ოსტატი",
-      observer: "სკეპტიკოსი დამკვირვებელი"
+      achiever: "High-Entropy Achiever",
+      keeper: "Structural Guard",
+      prisoner: "System Prisoner",
+      expander: "Kinetic Master",
+      observer: "Passive Observer"
     },
     bodySensations: {
-      throat: "ბურთი ყელში",
-      chest: "ზეწოლა მკერდში",
-      stomach: "სიცივე მუცელში",
-      shoulders: "სიმძიმე მხრებზე",
-      warmth: "სითბოს მოზღვავება",
-      none: "სიცარიელე/გაშეშება"
-    },
-    confrontations: {
-      confront_voice_block: "თქვენ თავს იხშობთ, სხეულს ახსოვს აკრძალვა.",
-      confront_expansion_glow: "ეს ძალის მოლოდინია. გაფართოების გზაზე ხართ.",
-      confront_default: "საინტერესო რეაქციაა."
+      throat: "Throat Block",
+      chest: "Chest Pressure",
+      stomach: "Visceral Cold",
+      shoulders: "Spinal Weight",
+      warmth: "Thermal Flow",
+      none: "Neural Numbness"
     },
     roadmapPaths: {
-      "roadmap.safety.title": "ფაზა 0: გადარჩენა",
-      "roadmap.safety.desc": "თქვენი სისტემა დეფიციტის რეჟიმშია.",
-      "roadmap.safety.hw": "შექმენით ფიზიკური 'ბალიში'.",
-      "roadmap.power.title": "ფაზა 3: მასშტაბი",
-      "roadmap.power.desc": "თქვენ მზად ხართ დიდი ციფრებისთვის.",
-      "roadmap.power.hw": "დაწერეთ გეგმა 10-ჯერ ზრდისთვის."
+      "protocols.title": "Prescription Plan"
     },
     scenes: {
       welcome: {
-        title: "მოულოდნელი საჩუქარი",
-        desc: "თქვენს ანგარიშზე მილიონი დაგერიცხათ. როგორია პირველი იმპულსი?",
-        c1: "გაშეშება. ეს ხაფანგია.",
-        c2: "მოქმედება. სურვილებზე.",
-        c3: "მიღება. ეს ჩემი შედეგია."
+        title: "Sudden Asset",
+        desc: "თქვენს ანგარიშზე მილიონი დაგერიცხათ. სისტემის რეაქცია?",
+        c1: "Panic/Freeze",
+        c2: "Impulse Action",
+        c3: "Strategic Acceptance"
       }
     }
   }

@@ -159,7 +159,7 @@ const App: React.FC = () => {
       <Layout lang={lang}>
         <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 px-4">
           <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center text-3xl mx-auto mb-6 border border-slate-50">
+            <div className="w-20 h-20 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center text-3xl mx-auto mb-6 border border-slate-50 animate-bounce">
               💎
             </div>
             <h2 className="text-2xl font-black tracking-tight">{t.enterPassword}</h2>
@@ -188,6 +188,9 @@ const App: React.FC = () => {
             <button onClick={handleLogin} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all text-sm uppercase tracking-widest">
               {t.accessBtn}
             </button>
+            <p className="text-center text-[8px] font-bold text-slate-300 uppercase tracking-widest pt-4">
+              Version Connection Test: Active
+            </p>
           </div>
         </div>
       </Layout>

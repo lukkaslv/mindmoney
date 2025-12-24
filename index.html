@@ -4,27 +4,103 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Money Mindset Game - Autonomous</title>
+    <title>Money Mindset - Premium Experience</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-      :root { --tg-viewport-height: 100vh; --primary: #6366f1; --bg-soft: #fcfdff; }
-      body { background: var(--bg-soft); color: #1e293b; font-family: -apple-system, system-ui, sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+      :root { 
+        --tg-viewport-height: 100vh; 
+        --primary: #6366f1; 
+        --accent: #818cf8;
+        --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+      }
+      
+      body { 
+        background: var(--bg-gradient);
+        color: #1e293b; 
+        font-family: 'Inter', -apple-system, system-ui, sans-serif; 
+        margin: 0; 
+        overflow: hidden; 
+        height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Живой анимированный фон */
+      body::before {
+        content: "";
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at center, rgba(99, 102, 241, 0.03) 0%, transparent 50%);
+        animation: rotate 20s linear infinite;
+        z-index: -1;
+      }
+
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
       #root { height: 100%; display: flex; flex-direction: column; }
-      .game-card { background: white; border-radius: 2.5rem; box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.05); }
-      .scene-transition { animation: fadeIn 0.4s ease-out; }
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .game-card { 
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 2.5rem; 
+        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .btn-primary:active {
+        transform: scale(0.97);
+        box-shadow: 0 5px 15px -5px rgba(99, 102, 241, 0.4);
+      }
+
+      .choice-button {
+        transition: all 0.2s ease;
+        border: 1px solid rgba(0, 0, 0, 0.03);
+      }
+
+      .choice-button:active {
+        background: #f8fafc;
+        transform: translateX(4px);
+      }
+
+      .scene-transition { 
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); 
+      }
+
+      @keyframes slideUp { 
+        from { opacity: 0; transform: translateY(20px) scale(0.98); } 
+        to { opacity: 1; transform: translateY(0) scale(1); } 
+      }
+
       ::-webkit-scrollbar { display: none; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>

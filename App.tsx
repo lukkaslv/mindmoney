@@ -4,7 +4,7 @@ import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { Choice, GameState } from './types.ts';
 import { translations } from './translations.ts';
-import { getPsychologicalFeedback, textToSpeech, generateMindsetAnchor } from './services/psychologyService.ts';
+import { getPsychologicalFeedback, textToSpeech } from './services/psychologyService.ts';
 
 declare global {
   interface Window {
@@ -48,7 +48,7 @@ const App: React.FC = () => {
       const tg = window.Telegram.WebApp;
       tg.ready();
       tg.expand();
-      tg.enableClosingConfirmation();
+      tg.headerColor = '#f8fafc';
     }
   }, []);
 
@@ -89,14 +89,8 @@ const App: React.FC = () => {
         setLoading(true);
         const data = await getPsychologicalFeedback(newHistory);
         setAnalysisData(data);
-        setLoadingStep(0);
-        
-        // Имитация процесса анализа
         const timer = setInterval(() => setLoadingStep(s => s + 1), 800);
-        setTimeout(() => {
-          clearInterval(timer);
-          setLoading(false);
-        }, 3200);
+        setTimeout(() => { clearInterval(timer); setLoading(false); }, 3200);
       } else {
         setState(prev => ({ ...prev, currentSceneId: nextId, history: newHistory }));
       }
@@ -104,11 +98,10 @@ const App: React.FC = () => {
     }, 400);
   }, [intermediateFeedback, state]);
 
-  // Мини-компонент Колеса Баланса
   const BalanceChart = ({ safety, permission, ambition }: any) => {
-    const size = 120;
+    const size = 140;
     const center = size / 2;
-    const r = 40;
+    const r = 50;
     const points = [
       [center, center - (r * safety / 100)],
       [center + (r * permission / 100 * 0.866), center + (r * permission / 100 * 0.5)],
@@ -117,13 +110,19 @@ const App: React.FC = () => {
     const path = `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]} L ${points[2][0]} ${points[2][1]} Z`;
 
     return (
-      <div className="flex justify-center py-4">
-        <svg width={size} height={size} className="drop-shadow-sm">
-          <circle cx={center} cy={center} r={r} fill="none" stroke="#f1f5f9" strokeWidth="1" />
-          <circle cx={center} cy={center} r={r/2} fill="none" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="2 2" />
-          <line x1={center} y1={center-r} x2={center} y2={center+r} stroke="#f1f5f9" strokeWidth="1" />
-          <path d={path} fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" />
-          {points.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill="#6366f1" />)}
+      <div className="flex justify-center py-6 relative">
+        <div className="absolute inset-0 bg-indigo-50/20 rounded-full blur-3xl"></div>
+        <svg width={size} height={size} className="relative z-10 drop-shadow-xl">
+          <circle cx={center} cy={center} r={r} fill="none" stroke="rgba(99, 102, 241, 0.1)" strokeWidth="1.5" />
+          <circle cx={center} cy={center} r={r*0.66} fill="none" stroke="rgba(99, 102, 241, 0.05)" strokeWidth="1" strokeDasharray="4 4" />
+          <line x1={center} y1={center-r} x2={center} y2={center+r} stroke="rgba(99, 102, 241, 0.1)" strokeWidth="1" />
+          <path d={path} fill="rgba(99, 102, 241, 0.15)" stroke="#6366f1" strokeWidth="3" strokeLinejoin="round" />
+          {points.map((p, i) => (
+            <g key={i}>
+              <circle cx={p[0]} cy={p[1]} r="5" fill="#6366f1" />
+              <circle cx={p[0]} cy={p[1]} r="8" fill="#6366f1" opacity="0.2" className="animate-pulse" />
+            </g>
+          ))}
         </svg>
       </div>
     );
@@ -132,14 +131,26 @@ const App: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <Layout lang={lang}>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12">
-          <div className="text-center space-y-6">
-            <div className="w-24 h-24 bg-white rounded-[2.5rem] shadow-xl shadow-indigo-100 flex items-center justify-center text-4xl mx-auto animate-bounce">💎</div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-800">{t.enterPassword}</h2>
+        <div className="flex flex-col items-center justify-center min-h-[75vh] space-y-16">
+          <div className="relative">
+            <div className="w-32 h-32 bg-white rounded-[3rem] shadow-2xl flex items-center justify-center text-5xl relative z-10 border border-white/50">💎</div>
+            <div className="absolute inset-0 bg-indigo-200 blur-[60px] opacity-30 animate-pulse"></div>
           </div>
-          <div className="w-full space-y-4">
-            <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••" className="w-full p-6 bg-white border border-slate-100 rounded-3xl text-center font-black text-2xl outline-none focus:ring-4 focus:ring-indigo-50 transition-all" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
-            <button onClick={handleLogin} className="w-full py-6 bg-indigo-600 text-white rounded-3xl font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all text-sm uppercase tracking-widest">{t.accessBtn}</button>
+          <div className="w-full space-y-6 text-center">
+            <h2 className="text-3xl font-[900] tracking-tight text-slate-800">{t.enterPassword}</h2>
+            <div className="space-y-4">
+              <input 
+                type="password" 
+                value={passwordInput} 
+                onChange={(e) => setPasswordInput(e.target.value)} 
+                placeholder="••••" 
+                className="w-full p-8 bg-white/70 backdrop-blur-md border border-white rounded-[2.5rem] text-center font-black text-3xl outline-none focus:ring-4 focus:ring-indigo-100/50 transition-all shadow-inner" 
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} 
+              />
+              <button onClick={handleLogin} className="w-full btn-primary py-7 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.2em]">
+                {t.accessBtn}
+              </button>
+            </div>
           </div>
         </div>
       </Layout>
@@ -149,27 +160,22 @@ const App: React.FC = () => {
   if (isAdmin) {
     return (
       <Layout lang={lang}>
-        <div className="space-y-8 pb-10">
-          <div className="text-center">
-            <h2 className="text-3xl font-black tracking-tighter mb-2">{t.adminTitle}</h2>
-            <div className="flex justify-center gap-2">
-              {['ru', 'ka'].map((l) => (
-                <button key={l} onClick={() => setLang(l as any)} className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest ${lang === l ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400'}`}>{l}</button>
-              ))}
+        <div className="space-y-8 scene-transition">
+          <div className="game-card p-10 space-y-10">
+            <h2 className="text-2xl font-[900] tracking-tight">{t.adminTitle}</h2>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{t.adminPassLabel}</label>
+                <input type="text" value={clientPassword} onChange={(e) => setClientPassword(e.target.value)} className="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none border border-transparent focus:border-indigo-100" />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">{t.adminContactLabel}</label>
+                <input type="text" value={bookingUrl} onChange={(e) => setBookingUrl(e.target.value)} className="w-full p-6 bg-slate-50 rounded-3xl font-bold outline-none border border-transparent focus:border-indigo-100" />
+              </div>
+              <button onClick={() => { localStorage.setItem('cfg_client_pass', clientPassword); localStorage.setItem('cfg_booking_url', bookingUrl); alert("Настройки обновлены"); }} className="w-full btn-primary py-6 text-white rounded-3xl font-black uppercase tracking-widest">Сохранить</button>
             </div>
           </div>
-          <div className="game-card p-8 space-y-8">
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.adminPassLabel}</label>
-              <input type="text" value={clientPassword} onChange={(e) => setClientPassword(e.target.value)} className="w-full p-5 bg-slate-50 rounded-2xl font-bold outline-none" />
-            </div>
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t.adminContactLabel}</label>
-              <input type="text" value={bookingUrl} onChange={(e) => setBookingUrl(e.target.value)} className="w-full p-5 bg-slate-50 rounded-2xl font-bold outline-none" />
-            </div>
-            <button onClick={() => { localStorage.setItem('cfg_client_pass', clientPassword); localStorage.setItem('cfg_booking_url', bookingUrl); alert("ОК!"); }} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-lg">Сохранить</button>
-          </div>
-          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">Выйти</button>
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Выйти из системы</button>
         </div>
       </Layout>
     );
@@ -178,49 +184,57 @@ const App: React.FC = () => {
   if (state.isFinished) {
     return (
       <Layout lang={lang}>
-        <div className="space-y-8 pb-10">
-          <div className="text-center">
-            <h2 className="text-3xl font-black tracking-tighter mb-1">{t.transformation}</h2>
-            <p className="text-indigo-500 text-[10px] font-black uppercase tracking-widest opacity-60">{t.profile}</p>
-          </div>
+        <div className="space-y-10 pb-10 scene-transition">
           {loading ? (
-            <div className="game-card p-12 flex flex-col items-center justify-center space-y-8 min-h-[450px]">
-              <div className="relative">
-                <div className="w-20 h-20 border-4 border-indigo-100 rounded-full"></div>
-                <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin absolute inset-0"></div>
+            <div className="game-card p-12 flex flex-col items-center justify-center space-y-10 min-h-[500px]">
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 border-8 border-indigo-50 rounded-full"></div>
+                <div className="absolute inset-0 border-8 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
               </div>
-              <p className="text-slate-400 font-black text-xs text-center leading-relaxed px-6 animate-pulse uppercase tracking-wider">{t.loadingSteps[loadingStep % t.loadingSteps.length]}</p>
+              <div className="text-center space-y-4">
+                <p className="text-slate-800 font-[900] text-sm uppercase tracking-widest">{t.loadingSteps[loadingStep % t.loadingSteps.length]}</p>
+                <p className="text-slate-400 text-xs font-medium italic opacity-60">Синхронизация данных...</p>
+              </div>
             </div>
           ) : analysisData && (
-            <div className="space-y-6 scene-transition">
-              <div className="game-card p-8 space-y-8">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Профиль:</p>
-                    <p className="text-xl font-black text-indigo-600">{analysisData.profileType}</p>
+            <div className="space-y-8">
+              <div className="game-card p-10 space-y-10">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="px-4 py-1.5 bg-indigo-50 rounded-full border border-indigo-100">
+                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">{analysisData.profileType}</span>
                   </div>
                   <BalanceChart safety={analysisData.scoreSafety} permission={analysisData.scorePermission} ambition={analysisData.scoreAmbition} />
                 </div>
                 
-                <div className="pt-6 border-t border-slate-50 space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-black uppercase tracking-tight text-sm text-slate-400">{t.mentorVoice}</h3>
-                    <button onClick={() => { setIsPlaying(true); textToSpeech(analysisData.analysisText).then(() => setIsPlaying(false)); }} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isPlaying ? 'bg-indigo-50 text-indigo-600' : 'bg-indigo-600 text-white shadow-xl shadow-indigo-100'}`}>{isPlaying ? '...' : '▶'}</button>
+                <div className="pt-8 border-t border-slate-50 space-y-8">
+                  <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-[2rem]">
+                    <h3 className="font-black uppercase tracking-[0.1em] text-[11px] text-slate-400 ml-2">{t.mentorVoice}</h3>
+                    <button onClick={() => { setIsPlaying(true); textToSpeech(analysisData.analysisText).then(() => setIsPlaying(false)); }} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isPlaying ? 'bg-white text-indigo-600 scale-90' : 'btn-primary text-white shadow-lg'}`}>{isPlaying ? '•••' : '▶'}</button>
                   </div>
-                  <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/20">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase mb-3 tracking-widest">{t.insight}</p>
-                    <p className="font-black text-lg leading-tight text-slate-800 italic">"{analysisData.keyBelief}"</p>
+
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-[2.5rem] blur opacity-10"></div>
+                    <div className="relative p-8 bg-white rounded-[2.5rem] border border-indigo-50">
+                      <p className="text-[9px] font-black text-indigo-400 uppercase mb-3 tracking-[0.3em]">{t.insight}</p>
+                      <p className="font-[900] text-xl leading-tight text-slate-800 italic">"{analysisData.keyBelief}"</p>
+                    </div>
                   </div>
-                  <p className="text-slate-500 leading-relaxed text-sm font-medium">{analysisData.analysisText}</p>
-                  <div className="p-6 bg-slate-900 text-white rounded-3xl">
-                    <p className="text-[10px] font-black text-white/30 uppercase mb-3 tracking-widest">{t.practice}</p>
+
+                  <p className="text-slate-500 leading-relaxed text-[15px] font-medium px-2">{analysisData.analysisText}</p>
+
+                  <div className="p-8 bg-slate-900 rounded-[2.5rem] text-white shadow-2xl">
+                    <p className="text-[9px] font-black text-white/30 uppercase mb-4 tracking-[0.3em]">{t.practice}</p>
                     <p className="font-bold text-sm leading-relaxed">{analysisData.actionStep}</p>
                   </div>
                 </div>
               </div>
               <div className="grid gap-4">
-                <button onClick={() => window.Telegram?.WebApp?.openLink(bookingUrl)} className="w-full py-6 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-100">{t.bookSession}</button>
-                <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-widest">{t.restart}</button>
+                <button onClick={() => window.Telegram?.WebApp?.openLink(bookingUrl)} className="w-full btn-primary py-7 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.2em]">
+                  {t.bookSession}
+                </button>
+                <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
+                  {t.restart}
+                </button>
               </div>
             </div>
           )}
@@ -232,23 +246,30 @@ const App: React.FC = () => {
   if (intermediateFeedback) {
     return (
       <Layout lang={lang}>
-        <div className="flex flex-col space-y-6 scene-transition h-full">
-          <div className="game-card p-8 flex-1 flex flex-col space-y-10">
-            <h3 className="text-2xl font-black text-center text-slate-800">{t.deeper}</h3>
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-2">{t.whereInBody}</label>
+        <div className="flex flex-col space-y-6 scene-transition h-full pt-4">
+          <div className="game-card p-10 flex-1 flex flex-col space-y-12">
+            <h3 className="text-3xl font-[900] text-center text-slate-800 tracking-tight">{t.deeper}</h3>
+            <div className="space-y-5">
+              <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">{t.whereInBody}</label>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(t.bodySensations).map(([key, label]) => (
-                  <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-5 rounded-2xl text-[10px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-slate-50 text-slate-400'}`}>{label}</button>
+                  <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-6 rounded-[1.8rem] text-[11px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-400'}`}>{label}</button>
                 ))}
               </div>
             </div>
-            <div className="space-y-4 flex-1">
-              <label className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-2">{t.whyChoice}</label>
-              <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-32 p-6 bg-slate-50 rounded-3xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-100 transition-all resize-none" placeholder="..." />
+            <div className="space-y-5 flex-1">
+              <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">{t.whyChoice}</label>
+              <textarea 
+                value={intermediateFeedback.userReflection} 
+                onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} 
+                className="w-full h-40 p-8 bg-slate-50/50 rounded-[2.5rem] text-base font-medium outline-none focus:ring-4 focus:ring-indigo-50 transition-all resize-none border border-transparent focus:bg-white" 
+                placeholder="..." 
+              />
             </div>
           </div>
-          <button onClick={proceedToNext} className={`w-full py-6 rounded-3xl font-black shadow-xl uppercase text-xs tracking-widest transition-all ${intermediateFeedback.bodySensation ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.saveNext}</button>
+          <button onClick={proceedToNext} className={`w-full py-7 rounded-[2.5rem] font-black shadow-2xl uppercase text-sm tracking-[0.2em] transition-all ${intermediateFeedback.bodySensation ? 'btn-primary text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>
+            {t.saveNext}
+          </button>
         </div>
       </Layout>
     );
@@ -257,20 +278,25 @@ const App: React.FC = () => {
   const scene = INITIAL_SCENES[state.currentSceneId];
   return (
     <Layout lang={lang}>
-      <div className={`space-y-8 transition-all duration-300 ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-        <div className="relative rounded-[3rem] overflow-hidden aspect-[4/5] shadow-2xl border-8 border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v20/800/1000`} alt="Scene" className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent flex flex-col justify-end p-8">
-            <h2 className="text-white font-black text-2xl mb-3 tracking-tight">{scene.title}</h2>
-            <p className="text-white/70 text-sm leading-relaxed font-medium">{scene.description}</p>
+      <div className={`space-y-10 scene-transition ${isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+        <div className="relative rounded-[3.5rem] overflow-hidden aspect-[4/5] shadow-2xl border-[12px] border-white/80 group">
+          <img src={`https://picsum.photos/seed/${scene.id}_v30/800/1000`} alt="Scene" className="object-cover w-full h-full transition-transform duration-[2s] group-hover:scale-110" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/30 to-transparent flex flex-col justify-end p-10">
+            <h2 className="text-white font-[900] text-3xl mb-4 tracking-tight leading-tight">{scene.title}</h2>
+            <p className="text-white/80 text-[15px] leading-relaxed font-medium line-clamp-3">{scene.description}</p>
           </div>
         </div>
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {scene.choices.map((choice) => (
             <button key={choice.id} onClick={() => {
               window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
               setIntermediateFeedback({ text: choice.text, nextId: choice.nextSceneId, belief: choice.beliefKey, userReflection: "", bodySensation: "" });
-            }} className="w-full p-6 text-left rounded-3xl flex items-center bg-white border border-slate-50 text-slate-700 active:scale-95 transition-all shadow-sm hover:shadow-md"><span className="font-black text-sm flex-1">{choice.text}</span><span className="text-indigo-600 font-black ml-4">→</span></button>
+            }} className="choice-button w-full p-7 text-left rounded-[2rem] flex items-center bg-white shadow-sm hover:shadow-md border border-white">
+              <span className="font-black text-[15px] text-slate-800 flex-1 leading-snug">{choice.text}</span>
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center ml-4">
+                <span className="text-indigo-600 font-black">→</span>
+              </div>
+            </button>
           ))}
         </div>
       </div>

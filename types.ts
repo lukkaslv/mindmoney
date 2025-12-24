@@ -1,30 +1,23 @@
 
 export interface Choice {
   id: string;
-  text: string;
-  feedback: string;
+  textKey: string;
   nextSceneId?: string;
   beliefKey: string;
 }
 
 export interface Scene {
   id: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descKey: string;
   choices: Choice[];
   image?: string;
 }
 
 export interface GameHistoryItem {
   sceneId: string; 
-  choiceId: string; 
+  choiceKey: string; 
   beliefKey: string;
   userReflection?: string;
-  bodySensation?: string; // Новое поле для телесного отклика
-}
-
-export interface GameState {
-  currentSceneId: string;
-  history: GameHistoryItem[];
-  isFinished: boolean;
+  bodySensation?: string;
 }

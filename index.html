@@ -5,25 +5,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Money Mindset Game</title>
-    <!-- Полифилл для process.env перед всеми скриптами -->
     <script>
-      window.process = { env: { API_KEY: "" } };
+      // Безопасная инициализация process для браузера
+      window.process = window.process || { env: {} };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
       :root {
         --tg-viewport-height: 100vh;
-        --tg-viewport-stable-height: 100vh;
+        --primary: #6366f1;
+        --secondary: #ec4899;
+        --bg-soft: #fcfdff;
       }
 
       body {
-        background-color: #f8fafc;
+        background: var(--bg-soft);
         color: #1e293b;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         overflow: hidden;
         height: 100vh;
-        height: -webkit-fill-available;
+        margin: 0;
+        -webkit-tap-highlight-color: transparent;
       }
 
       #root {
@@ -32,71 +35,77 @@
         flex-direction: column;
       }
 
-      .glass-card {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
       }
 
-      .scene-enter {
-        animation: sceneBlurIn 0.6s ease-out forwards;
+      .game-card {
+        background: white;
+        border-radius: 2.5rem;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
-      @keyframes sceneBlurIn {
-        from { filter: blur(10px); opacity: 0; transform: scale(1.05); }
-        to { filter: blur(0); opacity: 1; transform: scale(1); }
+      .game-card:active {
+        transform: scale(0.98);
       }
 
-      .pulse-soft {
-        animation: pulse 2s infinite;
+      .scene-transition {
+        animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      @keyframes pulse {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.05); opacity: 0.8; }
-        100% { transform: scale(1); opacity: 1; }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); filter: blur(10px); }
+        to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       }
 
-      .audio-bar {
-        width: 3px;
-        height: 15px;
-        background: currentColor;
+      .pulse-indigo {
+        animation: pulseIndigo 2s infinite;
+      }
+
+      @keyframes pulseIndigo {
+        0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+      }
+
+      .audio-wave-bar {
+        width: 4px;
+        background: var(--primary);
+        border-radius: 2px;
         margin: 0 1px;
-        border-radius: 10px;
-        animation: audioWave 1.2s infinite ease-in-out;
+        animation: wave 1s infinite ease-in-out;
       }
 
-      @keyframes audioWave {
-        0%, 100% { height: 5px; }
-        50% { height: 20px; }
+      @keyframes wave {
+        0%, 100% { height: 4px; }
+        50% { height: 16px; }
       }
 
+      /* Скрытие скроллбара */
+      ::-webkit-scrollbar { display: none; }
+      
       .safe-area-bottom {
-        padding-bottom: env(safe-area-inset-bottom, 20px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 1rem);
       }
     </style>
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3",
-    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
-  }
-}
-</script>
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.2.3",
+        "react-dom": "https://esm.sh/react-dom@^19.2.3",
+        "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- Вывод ошибок в консоль Telegram для отладки -->
-    <script>
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        console.error('Ошибка: ' + msg + '\nURL: ' + url + '\nЛиния: ' + lineNo);
-        return false;
-      };
-    </script>
   </body>
 </html>

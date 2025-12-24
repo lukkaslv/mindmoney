@@ -1,7 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
-// Функция для безопасного получения ключа
 const getApiKey = () => {
   try {
     return process.env.API_KEY || "";
@@ -10,31 +9,32 @@ const getApiKey = () => {
   }
 };
 
+// Инициализируем AI только если ключ есть
 const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export async function getPsychologicalFeedback(history: any[]) {
   const context = history.map(h => 
-    `Сцена: ${h.sceneId}. Выбор: ${h.choiceId}. Тело: ${h.bodySensation}. Мысли: ${h.userReflection}.`
+    `Ситуация: ${h.sceneId}. Выбор: ${h.choiceId}. Тело: ${h.bodySensation}. Рефлексия: ${h.userReflection}.`
   ).join('\n');
   
   const prompt = `
-    Ты — экспертный психолог в нише психологии денег (КПТ, ОРКТ, НЛП).
-    Проанализируй сессию клиента:
+    Ты — ведущий эксперт по психологии денег. Твой подход: синтез КПТ (когнитивно-поведенческая терапия) и ОРКТ (ориентированная на решение краткосрочная терапия).
+    
+    ПЕРЕД ТОБОЙ ДАННЫЕ СЕССИИ КЛИЕНТА:
     ${context}
     
-    Сформируй глубокий, но бережный анализ.
-    Твоя задача:
-    1. Написать анализ (analysisText) — используй метафоры, подчеркни связь тела и мыслей.
-    2. Оцени по шкале 0-100: 
-       - scoreSafety (безопасность больших денег)
+    ТВОЯ ЗАДАЧА:
+    1. Проведи глубокий психологический анализ (analysisText). Используй мягкий, поддерживающий тон. Подсвети связь между телесными зажимами и финансовыми страхами.
+    2. Выдай 4 оценки (0-100): 
+       - scoreSafety (насколько безопасно клиенту иметь деньги)
        - scorePermission (разрешение на успех)
-       - scoreAmbition (здоровые амбиции)
-       - capacity (текущая финансовая емкость)
-    3. Выдели главное ограничивающее убеждение (keyBelief).
-    4. Дай ОДИН мощный коучинговый вопрос для ОРКТ-проработки (actionStep).
-    5. Создай imagePrompt для генерации образа "внутреннего денежного сада" клиента на основе его выборов.
+       - scoreAmbition (уровень здоровых амбиций)
+       - capacity (финансовая емкость)
+    3. Сформулируй одно ключевое ОГРАНИЧИВАЮЩЕЕ УБЕЖДЕНИЕ (keyBelief).
+    4. Предложи ОДНУ микро-практику на сегодня (actionStep), основанную на ОРКТ (маленький шаг к изменениям).
+    5. Опиши метафорический образ "Денежного Источника" клиента для генерации картинки (imagePrompt).
     
-    Верни строго JSON.
+    ОТВЕТЬ ТОЛЬКО В JSON.
   `;
 
   try {
@@ -42,7 +42,7 @@ export async function getPsychologicalFeedback(history: any[]) {
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: { 
-        temperature: 0.8,
+        temperature: 0.7,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -63,7 +63,7 @@ export async function getPsychologicalFeedback(history: any[]) {
     
     return JSON.parse(response.text || "{}");
   } catch (error) {
-    console.error("Gemini analysis error", error);
+    console.error("Gemini Error:", error);
     return null;
   }
 }
@@ -73,7 +73,7 @@ export async function generateMindsetAnchor(prompt: string) {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { 
-        parts: [{ text: `High-end therapeutic digital art, meditative, calm, symbolic representation of: ${prompt}, soft focus, dreamy lighting, pastel and gold colors, 4k` }] 
+        parts: [{ text: `Professional therapeutic art, abstract psychological metaphor: ${prompt}. Dreamy, cinematic lighting, 8k, serene colors, gold accents, symmetrical composition.` }] 
       },
       config: { imageConfig: { aspectRatio: "16:9" } }
     });
@@ -88,7 +88,7 @@ export async function textToSpeech(text: string) {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Говори как мудрый, добрый наставник, делай паузы в важных местах: ${text}` }] }],
+      contents: [{ parts: [{ text: `Говори как очень мудрый, теплый и спокойный наставник. Делай паузы. Голос должен звучать дорого и уверенно: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
@@ -99,7 +99,6 @@ export async function textToSpeech(text: string) {
 }
 
 export function decodeBase64(base64: string) {
-  if (!base64) return new Uint8Array(0);
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -109,7 +108,6 @@ export function decodeBase64(base64: string) {
 }
 
 export async function playAudioBuffer(data: Uint8Array): Promise<void> {
-  if (!data || data.length === 0) return;
   return new Promise((resolve) => {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     const dataInt16 = new Int16Array(data.buffer);
@@ -117,12 +115,14 @@ export async function playAudioBuffer(data: Uint8Array): Promise<void> {
     const sampleRate = 24000;
     const frameCount = dataInt16.length / numChannels;
     const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+    
     for (let channel = 0; channel < numChannels; channel++) {
       const channelData = buffer.getChannelData(channel);
       for (let i = 0; i < frameCount; i++) {
         channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
       }
     }
+    
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);

@@ -8,11 +8,21 @@ import { calculateGenesisCore, AnalysisResult } from './services/psychologyServi
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
+  
   const [view, setView] = useState<'auth' | 'dashboard' | 'test' | 'results'>('auth');
   const [password, setPassword] = useState("");
   const [state, setState] = useState({ currentId: 'welcome', history: [] as any[] });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Безопасный хелпер для получения переводов
+  const getTranslation = (path: string) => {
+    try {
+      return path.split('.').reduce((p: any, c: any) => p && p[c], t) || `[${path}]`;
+    } catch (e) {
+      return `[${path}]`;
+    }
+  };
 
   const handleLogin = () => {
     if (["luka", "money", "admin"].includes(password.toLowerCase())) {
@@ -63,15 +73,15 @@ const App: React.FC = () => {
     <Layout lang={lang} onLangChange={setLang}>
       <div className="space-y-8 animate-in pb-10">
         <header className="px-4">
-          <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">{t.dashboard.title}</h2>
-          <p className="text-xs font-medium text-slate-400 mt-2">{t.dashboard.desc}</p>
+          <h2 className="text-4xl font-black italic tracking-tighter uppercase leading-none text-slate-900">{getTranslation('dashboard.title')}</h2>
+          <p className="text-xs font-medium text-slate-400 mt-2">{getTranslation('dashboard.desc')}</p>
         </header>
         <div className="grid grid-cols-2 gap-4 px-4">
           {[
-            { id: 'money', title: t.dashboard.money, icon: '💎' },
-            { id: 'power', title: t.dashboard.power, icon: '⚡' },
-            { id: 'body', title: t.dashboard.body, icon: '🌊' },
-            { id: 'future', title: t.dashboard.future, icon: '🔭' }
+            { id: 'money', title: getTranslation('dashboard.money'), icon: '💎' },
+            { id: 'power', title: getTranslation('dashboard.power'), icon: '⚡' },
+            { id: 'body', title: getTranslation('dashboard.body'), icon: '🌊' },
+            { id: 'future', title: getTranslation('dashboard.future'), icon: '🔭' }
           ].map(m => (
             <button key={m.id} onClick={startModule} className="aspect-square bg-white border-2 border-slate-50 rounded-[3rem] shadow-sm flex flex-col items-center justify-center space-y-3 hover:border-indigo-500 transition-all group">
               <span className="text-4xl group-hover:scale-110 transition-transform">{m.icon}</span>
@@ -85,19 +95,21 @@ const App: React.FC = () => {
 
   if (view === 'test') {
     const scene = INITIAL_SCENES[state.currentId];
+    if (!scene) return null;
+
     return (
       <Layout lang={lang} onLangChange={setLang}>
         <div className="space-y-8 py-6 animate-in">
           <div className="px-4 space-y-2">
             <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Module Active</span>
             <h3 className="text-3xl font-black italic leading-[1.1] text-slate-900">
-              {scene.titleKey.split('.').reduce((p:any,c:any)=>p[c], t)}
+              {getTranslation(scene.titleKey)}
             </h3>
           </div>
           <div className="px-4">
             <div className="bg-slate-950 p-8 rounded-[3rem] text-white/90 font-medium leading-relaxed italic relative overflow-hidden">
               <span className="absolute top-4 left-4 text-4xl text-indigo-500/20 font-black">"</span>
-              {scene.descKey.split('.').reduce((p:any,c:any)=>p[c], t)}
+              {getTranslation(scene.descKey)}
             </div>
           </div>
           <div className="px-4 space-y-3">
@@ -111,7 +123,7 @@ const App: React.FC = () => {
                   finishTest(nextHistory);
                 }
               }} className="w-full p-6 text-left bg-white border-2 border-slate-100 rounded-[2rem] shadow-sm hover:border-indigo-500 font-black text-xs uppercase tracking-tight transition-all active:bg-indigo-50">
-                {c.textKey.split('.').reduce((p:any,c:any)=>p[c], t)}
+                {getTranslation(c.textKey)}
               </button>
             ))}
           </div>
@@ -133,7 +145,7 @@ const App: React.FC = () => {
                 </div>
              </div>
              <div className="text-right">
-                <span className="text-[9px] font-black text-slate-400 uppercase">{t.results.integrity}</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase">{getTranslation('results.integrity')}</span>
                 <div className="text-4xl font-black italic text-indigo-600">{result.integrity}%</div>
              </div>
           </div>
@@ -154,14 +166,14 @@ const App: React.FC = () => {
           </div>
 
           <div className="p-8 bg-indigo-50 border-2 border-indigo-100 rounded-[3rem]">
-             <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-2">{t.results.metaTitle}</span>
+             <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block mb-2">{getTranslation('results.metaTitle')}</span>
              <p className="text-lg font-bold italic text-slate-800 leading-tight">"{result.metaphorSummary[lang]}"</p>
           </div>
         </section>
 
         <section className="px-4 space-y-6">
           <div className="flex items-center gap-4">
-             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] whitespace-nowrap">{t.results.roadmap}</h3>
+             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] whitespace-nowrap">{getTranslation('results.roadmap')}</h3>
              <div className="h-px w-full bg-slate-100"></div>
           </div>
           <div className="space-y-4">

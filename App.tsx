@@ -9,10 +9,10 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
   
-  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'results'>('auth');
+  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'reflection' | 'results'>('auth');
   const [password, setPassword] = useState("");
   const [activeModule, setActiveModule] = useState<string | null>(null);
-  const [state, setState] = useState({ currentId: 'welcome', history: [] as any[], lastChoice: null as any });
+  const [state, setState] = useState({ currentId: '0', history: [] as any[], lastChoice: null as any });
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [globalProgress, setGlobalProgress] = useState(0);
@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [bootStep, setBootStep] = useState(0);
   const [selectedBug, setSelectedBug] = useState<string | null>(null);
   const [lastSelectedNode, setLastSelectedNode] = useState<number | null>(null);
+  const [isGlitching, setIsGlitching] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('app_lang', lang);
@@ -43,19 +44,10 @@ const App: React.FC = () => {
     return Array.from({ length: 50 }, (_, i) => {
       const isCompleted = completedNodeIds.includes(i);
       const domain = i < 10 ? 'foundation' : i < 20 ? 'agency' : i < 30 ? 'money' : i < 40 ? 'social' : 'legacy';
-      
-      // Логика активации: первые 5 узлов всегда доступны. 
-      // Остальные доступны, если пройден предыдущий узел или достигнут порог прогресса.
       const isFirstOfDomain = i % 10 === 0;
       const isPrevCompleted = i > 0 && completedNodeIds.includes(i - 1);
       const isActive = i < 5 || isFirstOfDomain || isPrevCompleted || (globalProgress > (i * 1.5));
-
-      return {
-        id: i,
-        domain,
-        active: isActive,
-        done: isCompleted
-      };
+      return { id: i, domain, active: isActive, done: isCompleted };
     });
   }, [globalProgress, completedNodeIds]);
 
@@ -107,10 +99,9 @@ const App: React.FC = () => {
   const startNode = (nodeId: number, domain: string) => {
     setLastSelectedNode(nodeId);
     setActiveModule(domain);
-    // Выбираем стартовую сцену на основе домена
-    const moduleScenes = MODULE_REGISTRY[domain];
-    const firstSceneId = Object.keys(moduleScenes)[0];
-    setState({ currentId: firstSceneId, history: [], lastChoice: null });
+    // Каждый узел теперь запускает уникальную сцену из реестра
+    const sceneId = nodeId.toString();
+    setState({ currentId: sceneId, history: [], lastChoice: null });
     setView('test');
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
   };
@@ -132,24 +123,26 @@ const App: React.FC = () => {
   };
 
   const finishTest = (history: any[]) => {
+    setView('reflection');
     setLoading(true);
     setTimeout(() => {
       const res = calculateGenesisCore(history);
       setResult(res);
-      
+      if (res.neuroSync < 50) {
+        setIsGlitching(true);
+        setTimeout(() => setIsGlitching(false), 1500);
+      }
       if (lastSelectedNode !== null && !completedNodeIds.includes(lastSelectedNode)) {
         const nextNodes = [...completedNodeIds, lastSelectedNode];
         setCompletedNodeIds(nextNodes);
         localStorage.setItem('completed_node_ids', JSON.stringify(nextNodes));
-        
         const nextProgress = Math.min(100, globalProgress + 2);
         setGlobalProgress(nextProgress);
         localStorage.setItem('global_progress', nextProgress.toString());
       }
-      
       setLoading(false);
       setView('results');
-    }, 2000);
+    }, 2500);
   };
 
   if (view === 'auth') return (
@@ -262,7 +255,7 @@ const App: React.FC = () => {
     const scene = MODULE_REGISTRY[activeModule][state.currentId];
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-10 py-6 animate-in relative px-4" style={{ backgroundColor: currentBg }}>
+        <div className={`space-y-10 py-6 animate-in relative px-4 ${isGlitching ? 'glitch' : ''}`} style={{ backgroundColor: currentBg }}>
           <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/10 overflow-hidden">
              <div className="h-full bg-indigo-500 animate-scan-line"></div>
           </div>
@@ -308,9 +301,23 @@ const App: React.FC = () => {
     </Layout>
   );
 
+  if (view === 'reflection') return (
+    <Layout lang={lang} onLangChange={setLang}>
+       <div className="flex flex-col items-center justify-center py-20 px-10 space-y-8 animate-in h-full">
+          <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+             <div className="h-full bg-indigo-500 animate-progress"></div>
+          </div>
+          <div className="space-y-4 text-center">
+             <p className="text-[10px] font-mono text-indigo-500 uppercase tracking-[0.4em]">{getT('reflection.analyzing')}</p>
+             <p className="text-xs font-black italic text-slate-400 uppercase">{getT(`reflection.insight_${activeModule}`)}</p>
+          </div>
+       </div>
+    </Layout>
+  );
+
   if (view === 'results' && result) return (
     <Layout lang={lang} onLangChange={setLang}>
-      <div className="space-y-10 pb-24 animate-in px-4">
+      <div className={`space-y-10 pb-24 animate-in px-4 ${isGlitching ? 'glitch' : ''}`}>
         {selectedBug && (
            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm animate-in" onClick={() => setSelectedBug(null)}>
               <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-xs space-y-6" onClick={e => e.stopPropagation()}>

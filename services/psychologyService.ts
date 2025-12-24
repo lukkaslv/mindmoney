@@ -20,7 +20,7 @@ export interface AnalysisResult {
   capacity: number;
   entropyScore: number;
   systemHealth: number;
-  neuroSync: number; // Новый показатель
+  neuroSync: number;
   phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
   archetype: { ru: string; ka: string; icon: string };
   roadmap: ProtocolStep[];
@@ -69,7 +69,10 @@ export function calculateGenesisCore(history: any[]): AnalysisResult {
     'money_is_tool': { f: 5, a: 25, r: 20, e: -10, syncMap: ['s2'] },
     'self_permission': { f: 0, a: 15, r: 35, e: -15, syncMap: ['s2'] },
     'imposter_syndrome': { f: -5, a: -30, r: -15, e: 25, syncMap: ['s1', 's4'] },
-    'scarcity_mindset': { f: -25, a: -10, r: -15, e: 30, syncMap: ['s1'] }
+    'scarcity_mindset': { f: -25, a: -10, r: -15, e: 30, syncMap: ['s1'] },
+    'family_loyalty': { f: -30, a: -5, r: -10, e: 20, syncMap: ['s1', 's4'] },
+    'debt_trap': { f: -5, a: -25, r: 10, e: 25, syncMap: ['s1', 's4'] },
+    'betrayal_trauma': { f: -10, a: -10, r: 15, e: 35, syncMap: ['s3', 's4'] }
   };
 
   history.forEach(h => {
@@ -80,13 +83,12 @@ export function calculateGenesisCore(history: any[]): AnalysisResult {
       r = Math.max(5, Math.min(95, r + w.r));
       e = Math.max(5, Math.min(95, e + w.e));
 
-      // Детектор конфликта: если ощущение (sensation) не совпадает с ожидаемым для этого убеждения
       if (w.syncMap && !w.syncMap.includes(h.sensation)) {
         syncScore -= 15;
         bugs.push('body_mind_conflict');
       }
 
-      if (w.e > 15) bugs.push(h.beliefKey);
+      if (w.e > 10 || w.f < -10 || w.a < -10) bugs.push(h.beliefKey);
     }
   });
 

@@ -14,7 +14,9 @@ declare global {
 const MASTER_KEY = "admin777";
 
 const getTranslation = (obj: any, path: string) => {
-  return path.split('.').reduce((prev, curr) => prev && prev[curr], obj) || path;
+  if (!path) return "";
+  const result = path.split('.').reduce((prev, curr) => prev && prev[curr], obj);
+  return typeof result === 'string' ? result : path;
 };
 
 const App: React.FC = () => {
@@ -191,7 +193,7 @@ const App: React.FC = () => {
           <div className="game-card p-10 flex-1 flex flex-col space-y-10 bg-white/60">
             <div className="text-center space-y-3">
               <h3 className="text-4xl font-[900] text-slate-900 tracking-tight">{t.reflectionTitle}</h3>
-              <p className="text-indigo-400 text-[11px] font-black uppercase tracking-[0.4em]">{t.reflectionSubtitle}</p>
+              <p className="text-indigo-400 text-[11px] font-black uppercase tracking-widest">{t.reflectionSubtitle}</p>
             </div>
             
             <div className="space-y-6">

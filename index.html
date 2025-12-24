@@ -12,7 +12,7 @@
         --tg-viewport-height: 100vh; 
         --primary: #6366f1; 
         --accent: #818cf8;
-        --bg-gradient: radial-gradient(circle at 50% 50%, #fdfdff 0%, #f4f7ff 100%);
+        --bg-gradient: radial-gradient(circle at 50% 50%, #fdfdff 0%, #f1f4ff 100%);
       }
       
       body { 
@@ -23,6 +23,12 @@
         overflow: hidden; 
         height: 100vh;
         -webkit-font-smoothing: antialiased;
+        transition: background 0.5s ease;
+      }
+
+      /* Специфические настройки для грузинского языка */
+      body[lang="ka"] {
+        line-height: 1.6;
       }
 
       body::after {
@@ -33,7 +39,7 @@
         width: 100%;
         height: 100%;
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-        opacity: 0.03;
+        opacity: 0.04;
         pointer-events: none;
         z-index: 100;
       }
@@ -41,33 +47,37 @@
       #root { height: 100%; display: flex; flex-direction: column; }
 
       .game-card { 
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 4rem; 
-        box-shadow: 0 40px 100px -20px rgba(99, 102, 241, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 3.5rem; 
+        box-shadow: 0 40px 100px -20px rgba(99, 102, 241, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.5);
       }
 
       .btn-primary {
         background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        box-shadow: 0 20px 40px -10px rgba(30, 27, 75, 0.3);
+        box-shadow: 0 25px 50px -12px rgba(30, 27, 75, 0.3);
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       }
 
-      .btn-primary:active {
-        transform: scale(0.95) translateY(4px);
-      }
+      .btn-primary:active { transform: scale(0.96) translateY(2px); }
 
       .choice-button {
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .scene-transition { 
-        animation: slideUpLarge 0.8s cubic-bezier(0.2, 1, 0.2, 1); 
+        animation: sceneEnter 0.7s cubic-bezier(0.23, 1, 0.32, 1); 
       }
 
-      @keyframes slideUpLarge { 
-        from { opacity: 0; transform: translateY(60px) scale(0.95); filter: blur(20px); } 
+      @keyframes sceneEnter { 
+        from { opacity: 0; transform: translateY(30px) scale(0.98); filter: blur(10px); } 
         to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } 
+      }
+
+      .progress-bar-fill {
+        transition: width 0.8s cubic-bezier(0.65, 0, 0.35, 1);
       }
 
       ::-webkit-scrollbar { display: none; }

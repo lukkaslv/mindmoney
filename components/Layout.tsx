@@ -1,6 +1,14 @@
-
 import React, { useState } from 'react';
 import { translations } from '../translations.ts';
+
+// Fix: Declared Telegram on the global Window interface for the Telegram WebApp SDK
+declare global {
+  interface Window {
+    Telegram: {
+      WebApp: any;
+    };
+  }
+}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +21,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
   const [showBuild, setShowBuild] = useState(false);
 
   const handleClearCache = () => {
+    // Fix: Accessing Telegram safely through the newly declared interface
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('warning');
     if (confirm(lang === 'ru' ? "Очистить текущую сессию?" : "გსურთ სესიის გასუფთავება?")) {
       localStorage.clear();
@@ -23,6 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) 
   const toggleLang = () => {
     const nextLang = lang === 'ru' ? 'ka' : 'ru';
     onLangChange(nextLang);
+    // Fix: Accessing Telegram safely
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
   };
 

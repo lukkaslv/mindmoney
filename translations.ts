@@ -26,14 +26,11 @@ export const translations = {
       ready: "Система готова."
     },
     dashboard: {
-      title: "Master Control",
-      desc: "Мониторинг 5-ти базовых доменов психики. Выберите узел для аудита.",
-      foundation: "Фундамент (Безопасность)",
-      agency: "Агентность (Воля)",
-      resource: "Ресурс (Капитал)",
-      social: "Социум (Власть)",
-      legacy: "Наследие (Смыслы)",
-      locked: "Блокировка: Низкий уровень"
+      title: "Neural Matrix",
+      desc: "50 узлов контроля. Заполните матрицу для полной детерминации.",
+      nodes_found: "Узлов активно",
+      sync_status: "Статус синхронизации: ",
+      locked: "Доступ ограничен"
     },
     results: {
       integrity: "Целостность",
@@ -41,8 +38,10 @@ export const translations = {
       capacity: "Емкость",
       roadmap: "Операционный План",
       logTitle: "Анализ системных дефектов",
-      back: "В терминал",
-      stability: "Индекс стабильности"
+      back: "В матрицу",
+      stability: "Индекс стабильности",
+      neuro_sync: "Нейро-синхрон",
+      conflict_warn: "Обнаружен когнитивно-телесный конфликт!"
     },
     phases: {
       sanitation: "САНАЦИЯ",
@@ -146,7 +145,9 @@ export const translations = {
       scarcity_mindset: "Установка на дефицит",
       short_term_bias: "Краткосрочное мышление",
       shame_of_success: "Стыд за реализацию",
-      error_intolerance: "Непереносимость ошибок"
+      error_intolerance: "Непереносимость ошибок",
+      body_mind_conflict: "Конфликт Разум-Тело",
+      unconscious_fear: "Бессознательный страх"
     }
   },
   ka: {
@@ -175,14 +176,11 @@ export const translations = {
       ready: "სისტემა მზად არის."
     },
     dashboard: {
-      title: "Master Control",
-      desc: "ფსიქიკის 5 საბაზისო დომენის მონიტორინგი. აირჩიეთ კვანძი აუდიტისთვის.",
-      foundation: "ფუნდამენტი",
-      agency: "აგენტურობა",
-      resource: "რესურსი",
-      social: "სოციუმი",
-      legacy: "მემკვიდრეობა",
-      locked: "ბლოკი: დაბალი დონე"
+      title: "Neural Matrix",
+      desc: "50 საკონტროლო კვანძი. შეავსეთ მატრიცა სრული დეტერმინაციისთვის.",
+      nodes_found: "აქტიური კვანძები",
+      sync_status: "სინქრონიზაციის სტატუსი: ",
+      locked: "წვდომა შეზღუდულია"
     },
     results: {
       integrity: "მთლიანობა",
@@ -190,8 +188,10 @@ export const translations = {
       capacity: "ტევადობა",
       roadmap: "ოპერაციული გეგმა",
       logTitle: "სისტემური დეფექტების ანალიზი",
-      back: "ტერმინალში",
-      stability: "სტაბილურობის ინდექსი"
+      back: "მატრიცაში",
+      stability: "სტაბილურობის ინდექსი",
+      neuro_sync: "ნეირო-სინქრონი",
+      conflict_warn: "აღმოჩენილია კოგნიტურ-სხეულებრივი კონფლიქტი!"
     },
     phases: {
       sanitation: "სანაცია",
@@ -295,7 +295,9 @@ export const translations = {
       scarcity_mindset: "დეფიციტის ინსტალაცია",
       short_term_bias: "მოკლევადიანი აზროვნება",
       shame_of_success: "რეალიზაციის სირცხვილი",
-      error_intolerance: "შეცდომის აუტანლობა"
+      error_intolerance: "შეცდომის აუტანლობა",
+      body_mind_conflict: "გონება-სხეულის კონფლიქტი",
+      unconscious_fear: "ქვეცნობიერი შიში"
     }
   }
 };

@@ -1,6 +1,4 @@
 
-// Автономный глубокий психологический движок v6.0 (Localization-Ready)
-
 export interface AnalysisResult {
   archetypeKey: string;
   conflictKey: string;
@@ -9,7 +7,11 @@ export interface AnalysisResult {
   scoreSafety: number;
   scorePermission: number;
   scoreAmbition: number;
-  shadowKeys: string[];
+  reflectionMirror: {
+    sceneTitle: string;
+    thought: string;
+    sensation: string;
+  }[];
   defenseMechanisms: string[];
   roadmapKeys: {
     now: string;
@@ -33,10 +35,11 @@ const TRAITS: Record<string, any> = {
   'self_permission': { s: 25, p: 35, a: 25, conflict: 'self_worth', defense: 'Принятие' }
 };
 
-export async function getPsychologicalFeedback(history: any[]): Promise<AnalysisResult> {
+export async function getPsychologicalFeedback(history: any[], scenes: any): Promise<AnalysisResult> {
   let safety = 50, permission = 50, ambition = 50;
   let traits: string[] = [];
   let defenses: string[] = [];
+  let reflectionMirror: any[] = [];
 
   history.forEach(item => {
     const t = TRAITS[item.beliefKey];
@@ -47,9 +50,17 @@ export async function getPsychologicalFeedback(history: any[]): Promise<Analysis
       traits.push(item.beliefKey);
       defenses.push(t.defense);
     }
+    
+    // Собираем "Зеркало" только если есть осмысленный ввод
+    if (item.userReflection || item.bodySensation) {
+      reflectionMirror.push({
+        sceneTitle: scenes[item.sceneId]?.titleKey || "",
+        thought: item.userReflection || "...",
+        sensation: item.bodySensation || ""
+      });
+    }
   });
 
-  // Логика архетипа
   let archetype = "observer";
   if (safety < 45 && permission < 45) archetype = "prisoner";
   else if (safety < 45 && ambition > 60) archetype = "achiever";
@@ -61,11 +72,11 @@ export async function getPsychologicalFeedback(history: any[]): Promise<Analysis
     archetypeKey: archetype,
     conflictKey: TRAITS[traits[traits.length - 1] || 'money_is_tool'].conflict,
     bodyAnalysisKey: (history[history.length-1]?.bodySensation || "none"),
-    analysisTextKeys: traits.slice(-2),
+    analysisTextKeys: Array.from(new Set(traits.slice(-3))),
     scoreSafety: safety,
     scorePermission: permission,
     scoreAmbition: ambition,
-    shadowKeys: traits.slice(0, 2),
+    reflectionMirror: reflectionMirror.slice(-4), // Берем последние ключевые моменты
     defenseMechanisms: Array.from(new Set(defenses)).slice(0, 3),
     roadmapKeys: {
       now: safety < 45 ? "grounding" : "permission",

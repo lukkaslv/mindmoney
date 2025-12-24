@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { translations } from './translations.ts';
-import { getPsychologicalFeedback } from './services/psychologyService.ts';
+import { getPsychologicalFeedback, AnalysisResult } from './services/psychologyService.ts';
 
-// Fix: Corrected global Window interface declaration (uppercase 'Window' is required to extend the global object)
 declare global {
   interface Window {
     Telegram: { WebApp: any; };
@@ -68,7 +68,7 @@ const App: React.FC = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [state, setState] = useState<any>({ currentSceneId: 'welcome', history: [], isFinished: false });
   const [intermediateFeedback, setIntermediateFeedback] = useState<any>(null);
-  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
 
@@ -76,7 +76,6 @@ const App: React.FC = () => {
   const currentProgress = (state.history.length / totalScenes) * 100;
 
   useEffect(() => {
-    // Fix: Accessing Telegram WebApp through the corrected Window interface
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -91,7 +90,6 @@ const App: React.FC = () => {
       localStorage.setItem('is_auth', 'true');
       playSound('success');
     } else {
-      // Fix: Accessing Telegram WebApp safely
       window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
     }
   };
@@ -99,7 +97,6 @@ const App: React.FC = () => {
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
     playSound('click');
-    // Fix: Accessing Telegram WebApp safely
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
     
     const newHistory = [...state.history, { 
@@ -115,8 +112,9 @@ const App: React.FC = () => {
     setTimeout(async () => {
       if (!intermediateFeedback.nextId || intermediateFeedback.nextId === 'end') {
         setLoading(true);
-        const data = await getPsychologicalFeedback(newHistory);
+        const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
         setAnalysisData(data);
+        
         let step = 0;
         const timer = setInterval(() => {
           setLoadingStep(s => s + 1);
@@ -126,7 +124,7 @@ const App: React.FC = () => {
             setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
             playSound('success');
           }
-        }, 800);
+        }, 600);
       } else {
         setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
       }
@@ -135,7 +133,7 @@ const App: React.FC = () => {
   }, [intermediateFeedback, state, t.loadingSteps.length]);
 
   const RadarChart = ({ safety, permission, ambition }: any) => {
-    const size = 240; const center = size / 2; const r = 100;
+    const size = 300; const center = size / 2; const r = 90;
     const points = [
       [center, center - (r * (safety || 50) / 100)],
       [center + (r * (permission || 50) / 100 * 0.866), center + (r * (permission || 50) / 100 * 0.5)],
@@ -143,17 +141,24 @@ const App: React.FC = () => {
     ];
     const path = `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]} L ${points[2][0]} ${points[2][1]} Z`;
     
+    const labels = [
+      { text: lang === 'ru' ? 'Безопасность' : 'უსაფრთხოება', x: center, y: center - r - 25 },
+      { text: lang === 'ru' ? 'Разрешение' : 'ნებადართვა', x: center + r + 15, y: center + r / 2 + 15 },
+      { text: lang === 'ru' ? 'Амбиции' : 'ამბიციები', x: center - r - 15, y: center + r / 2 + 15 }
+    ];
+
     return (
-      <div className="flex flex-col items-center py-8 relative">
-        <svg width={size} height={size} className="drop-shadow-[0_15px_30px_rgba(99,102,241,0.2)]">
+      <div className="flex flex-col items-center py-12 relative overflow-visible">
+        <svg width={size} height={size} className="drop-shadow-[0_20px_40px_rgba(99,102,241,0.2)] overflow-visible">
           {[0.25, 0.5, 0.75, 1].map(scale => (
-            <path key={scale} d={`M ${center} ${center - r*scale} L ${center + r*scale*0.866} ${center + r*scale*0.5} L ${center - r*scale*0.866} ${center + r*scale*0.5} Z`} fill="none" stroke="rgba(99, 102, 241, 0.1)" strokeWidth="1.5" />
+            <path key={scale} d={`M ${center} ${center - r*scale} L ${center + r*scale*0.866} ${center + r*scale*0.5} L ${center - r*scale*0.866} ${center + r*scale*0.5} Z`} fill="none" stroke="rgba(99, 102, 241, 0.1)" strokeWidth="1" />
           ))}
-          <path d={path} fill="rgba(99, 102, 241, 0.25)" stroke="#6366f1" strokeWidth="6" strokeLinejoin="round" className="animate-in zoom-in duration-1000" />
+          <path d={path} fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" strokeWidth="6" strokeLinejoin="round" className="animate-in zoom-in duration-1000" />
+          {labels.map((l, i) => (
+            <text key={i} x={l.x} y={l.y} textAnchor="middle" className="fill-slate-400 font-black text-[9px] uppercase tracking-[0.2em]">{l.text}</text>
+          ))}
           {points.map((p, i) => (
-            <g key={i}>
-               <circle cx={p[0]} cy={p[1]} r="8" fill="#6366f1" stroke="white" strokeWidth="4" className="animate-bounce" style={{animationDelay: `${i*200}ms`}} />
-            </g>
+            <circle key={i} cx={p[0]} cy={p[1]} r="7" fill="#6366f1" stroke="white" strokeWidth="3" />
           ))}
         </svg>
       </div>
@@ -197,65 +202,92 @@ const App: React.FC = () => {
   if (state.isFinished && analysisData) {
     return (
       <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-8 pb-20 scene-transition">
-          <div className="game-card p-10 border-b-[12px] border-indigo-600 shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-10 text-6xl rotate-12">💎</div>
-            <div className="text-center space-y-3 mb-8">
-              <span className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.5em]">{t.resultArchetype}</span>
-              <h2 className="text-4xl font-[900] text-slate-900 tracking-tight leading-none">{(t.archetypes as any)[analysisData.archetypeKey]}</h2>
-              <div className="inline-block px-5 py-2.5 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest mt-4 shadow-lg">
+        <div className="space-y-10 pb-24 scene-transition">
+          {/* Header Result */}
+          <div className="game-card p-10 border-b-[12px] border-indigo-600 shadow-3xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-8 opacity-5 text-6xl rotate-12 select-none">💎</div>
+            <div className="text-center space-y-3 mb-6">
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em]">{t.resultArchetype}</span>
+              <h2 className="text-4xl font-[900] text-slate-900 tracking-tight leading-none italic uppercase">
+                {(t.archetypes as any)[analysisData.archetypeKey]}
+              </h2>
+              <div className="inline-block px-5 py-2.5 bg-slate-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest mt-4 shadow-xl">
                 {t.resultConflict}: {(t.conflicts as any)[analysisData.conflictKey]}
               </div>
             </div>
             <RadarChart safety={analysisData.scoreSafety} permission={analysisData.scorePermission} ambition={analysisData.scoreAmbition} />
           </div>
 
-          <div className="game-card p-10 space-y-12">
-            <section className="space-y-6">
-              <h3 className="text-[12px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-4">
-                <span className="w-6 h-1 bg-indigo-500 rounded-full"></span> {t.resultAnalysis}
-              </h3>
-              <div className="space-y-5">
-                {analysisData.analysisTextKeys.map((key: string, i: number) => (
-                  <div key={i} className="flex gap-4 p-6 bg-slate-50/50 rounded-3xl border border-white">
-                    <span className="text-2xl">💡</span>
-                    <p className="text-slate-700 leading-relaxed text-lg font-medium">{(t.traitsAnalysis as any)[key]}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 pt-2">
-                {analysisData.defenseMechanisms.map((def: string, i: number) => (
-                  <span key={i} className="px-5 py-2.5 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase border border-indigo-100 shadow-sm">🛡️ {def}</span>
-                ))}
-              </div>
-            </section>
+          {/* Reflection Mirror (Self-Validation Block) */}
+          <section className="space-y-6">
+            <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4 px-4">
+              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.reflectionMirrorTitle || "Зеркало Ваших Чувств"}
+            </h3>
+            <div className="grid gap-4">
+              {analysisData.reflectionMirror.map((item, i) => (
+                <div key={i} className="game-card p-8 border-l-8 border-indigo-200 bg-white/40">
+                   <div className="flex flex-col gap-4">
+                      <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{getTranslation(t, item.sceneTitle)}</span>
+                      <p className="text-lg font-medium italic text-slate-700 leading-relaxed">"{item.thought}"</p>
+                      {item.sensation && (
+                        <div className="flex items-center gap-2 mt-2">
+                           <span className="text-xs px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full font-bold uppercase tracking-wider">{item.sensation}</span>
+                        </div>
+                      )}
+                   </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-            <section className="space-y-8">
-              <h3 className="text-[12px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-4">
-                <span className="w-6 h-1 bg-indigo-500 rounded-full"></span> {t.resultRoadmap}
-              </h3>
-              <div className="space-y-5">
-                {[
-                  { label: t.roadmapLabels.now, icon: "⚡", key: analysisData.roadmapKeys.now },
-                  { label: t.roadmapLabels.month1, icon: "📅", key: analysisData.roadmapKeys.month1 },
-                  { label: t.roadmapLabels.month6, icon: "🎯", key: analysisData.roadmapKeys.month6 }
-                ].map((step, i) => (
-                  <div key={i} className="flex gap-5 p-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-xl hover:shadow-2xl transition-shadow group">
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white transition-colors flex items-center justify-center text-2xl shrink-0 border border-indigo-100/50">{step.icon}</div>
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{step.label}</span>
-                      <p className="text-sm font-bold text-slate-800 leading-relaxed">{(t.roadmapTips as any)[step.key]}</p>
-                    </div>
+          {/* Deep Analysis Cards */}
+          <section className="space-y-6">
+            <h3 className="text-[12px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-4 px-4">
+              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.resultAnalysis}
+            </h3>
+            <div className="grid gap-6">
+              {analysisData.analysisTextKeys.map((key: string, i: number) => (
+                <div key={i} className="game-card p-8 bg-slate-900 text-white shadow-2xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                  <div className="flex gap-6">
+                    <span className="text-4xl opacity-50">🧩</span>
+                    <p className="text-lg leading-relaxed font-medium">{(t.traitsAnalysis as any)[key]}</p>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 px-4">
+              {analysisData.defenseMechanisms.map((def: string, i: number) => (
+                <span key={i} className="px-5 py-2.5 bg-white border border-slate-100 text-slate-600 rounded-2xl text-[10px] font-black uppercase shadow-sm">🛡️ {def}</span>
+              ))}
+            </div>
+          </section>
 
-          <div className="grid gap-5 px-2">
-            {/* Fix: Accessing Telegram WebApp safely through window.Telegram */}
-            <button onClick={() => window.Telegram?.WebApp?.openLink("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] active:scale-95 transition-transform">{t.bookBtn}</button>
-            <button onClick={() => window.location.reload()} className="w-full py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-indigo-600 transition-colors text-center">{t.restartBtn}</button>
+          {/* Roadmap */}
+          <section className="space-y-8 px-2">
+            <h3 className="text-[12px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-4">
+              <span className="w-8 h-1 bg-indigo-600 rounded-full"></span> {t.resultRoadmap}
+            </h3>
+            <div className="space-y-4">
+              {[
+                { label: t.roadmapLabels.now, icon: "🎯", key: analysisData.roadmapKeys.now },
+                { label: t.roadmapLabels.month1, icon: "🔄", key: analysisData.roadmapKeys.month1 },
+                { label: t.roadmapLabels.month6, icon: "🚀", key: analysisData.roadmapKeys.month6 }
+              ].map((step, i) => (
+                <div key={i} className="flex gap-6 p-8 bg-white/60 backdrop-blur-xl rounded-[3rem] border border-white shadow-xl">
+                  <div className="w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl shrink-0 shadow-lg">{step.icon}</div>
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{step.label}</span>
+                    <p className="text-md font-bold text-slate-800 leading-tight">{(t.roadmapTips as any)[step.key]}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="grid gap-5 px-4">
+            <button onClick={() => window.Telegram?.WebApp?.openLink("https://t.me/your_username")} className="w-full btn-primary py-8 text-white rounded-[3rem] font-black text-sm uppercase tracking-[0.4em] active:scale-95 transition-transform">{t.bookBtn}</button>
+            <button onClick={() => window.location.reload()} className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:text-indigo-600 transition-colors text-center">{t.restartBtn}</button>
           </div>
         </div>
       </Layout>
@@ -296,8 +328,6 @@ const App: React.FC = () => {
   return (
     <Layout lang={lang} onLangChange={setLang}>
       <div className={`space-y-10 scene-transition ${isTransitioning ? 'opacity-0 scale-95 blur-2xl' : 'opacity-100 scale-100 blur-0'}`}>
-        
-        {/* Progress Bar */}
         <div className="px-4 space-y-2">
           <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
              <span>Step {state.history.length + 1} / {totalScenes}</span>
@@ -310,7 +340,7 @@ const App: React.FC = () => {
 
         <div className="relative rounded-[4.5rem] overflow-hidden aspect-[3/4] shadow-3xl border-[16px] border-white group">
           <img src={`https://picsum.photos/seed/${scene.id}_v${state.history.length}_HD/1200/1500`} alt="Scene" className="object-cover w-full h-full transition-transform duration-[12s] group-hover:scale-110 ease-out" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent flex flex-col justify-end p-6 pb-10">
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent flex flex-col justify-end p-8 pb-12">
             <div className="space-y-4">
               <div className="w-16 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
               <h2 className="text-white font-[900] text-3xl tracking-tight leading-none uppercase">{getTranslation(t, scene.titleKey)}</h2>
@@ -323,7 +353,6 @@ const App: React.FC = () => {
           {scene.choices.map((choice) => (
             <button key={choice.id} onClick={() => {
               playSound('click');
-              // Fix: Accessing Telegram safely through newly declared interface
               window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy');
               setIntermediateFeedback({ text: getTranslation(t, choice.textKey), nextId: choice.nextSceneId, belief: choice.beliefKey, userReflection: "", bodySensation: "" });
             }} className="choice-button w-full p-8 text-left rounded-[2.5rem] flex items-center bg-white shadow-2xl hover:shadow-indigo-100 border-2 border-white hover:border-indigo-100 group active:scale-[0.96] transition-all">

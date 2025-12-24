@@ -1,7 +1,6 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
-// Вспомогательная функция для получения ключа из любого доступного места
 const getSafeApiKey = () => {
   if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
     return process.env.API_KEY;
@@ -16,19 +15,31 @@ const getSafeApiKey = () => {
 
 export async function getPsychologicalFeedback(history: any[]) {
   const apiKey = getSafeApiKey();
-  if (!apiKey) throw new Error("API_KEY is not configured in Vercel settings.");
+  if (!apiKey) throw new Error("API_KEY is not configured.");
 
   const ai = new GoogleGenAI({ apiKey });
   const context = history.map(h => 
-    `Ситуация: ${h.sceneId}. Выбор: ${h.choiceId}. Тело: ${h.bodySensation}. Рефлексия: ${h.userReflection}.`
+    `Ситуация: ${h.sceneId}. Выбор: ${h.choiceId}. Ощущение: ${h.bodySensation}. Мысли: ${h.userReflection}.`
   ).join('\n');
   
   const prompt = `
-    Ты — ведущий эксперт по психологии денег. Твой подход: синтез КПТ и ОРКТ.
-    ДАННЫЕ СЕССИИ КЛИЕНТА:
+    Ты — высококвалифицированный психолог, эксперт по финансовому поведению. 
+    Твоя задача: провести анализ сессии клиента, используя КПТ и системный подход.
+    
+    ДАННЫЕ КЛИЕНТА:
     ${context}
     
-    ОТВЕТЬ ТОЛЬКО В JSON согласно схеме.
+    ТРЕБОВАНИЯ К ОТВЕТУ:
+    - analysisText: 3-4 предложения, глубоких, поддерживающих, без клише.
+    - scoreSafety: уровень чувства безопасности (0-100).
+    - scorePermission: уровень внутреннего разрешения на богатство (0-100).
+    - scoreAmbition: уровень здоровых амбиций (0-100).
+    - capacity: общая финансовая емкость (0-100).
+    - keyBelief: одна ключевая фраза-инсайт в кавычках.
+    - actionStep: конкретное упражнение на 5 минут в день.
+    - imagePrompt: описание метафорической картины для генерации ИИ-якоря.
+    
+    ОТВЕТЬ ТОЛЬКО В JSON.
   `;
 
   try {
@@ -36,7 +47,7 @@ export async function getPsychologicalFeedback(history: any[]) {
       model: "gemini-3-flash-preview",
       contents: prompt,
       config: { 
-        temperature: 0.7,
+        temperature: 0.8,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -65,13 +76,12 @@ export async function getPsychologicalFeedback(history: any[]) {
 export async function generateMindsetAnchor(prompt: string) {
   const apiKey = getSafeApiKey();
   if (!apiKey) return null;
-
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { 
-        parts: [{ text: `Professional therapeutic art, abstract psychological metaphor: ${prompt}. Dreamy, cinematic lighting, gold accents.` }] 
+        parts: [{ text: `High-end therapeutic digital art, psychological symbol, metaphysical style: ${prompt}. Soft bokeh, ethereal light, gold and deep blue tones, 8k resolution.` }] 
       },
       config: { imageConfig: { aspectRatio: "16:9" } }
     });
@@ -85,12 +95,11 @@ export async function generateMindsetAnchor(prompt: string) {
 export async function textToSpeech(text: string) {
   const apiKey = getSafeApiKey();
   if (!apiKey) return null;
-
   const ai = new GoogleGenAI({ apiKey });
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Мудрый, спокойный голос наставника. Паузы. Уверенность: ${text}` }] }],
+      contents: [{ parts: [{ text: `Спокойный, бархатный голос психолога-наставника. Четкая дикция, мягкие паузы: ${text}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
@@ -118,21 +127,19 @@ export async function playAudioBuffer(data: Uint8Array): Promise<void> {
       const sampleRate = 24000;
       const frameCount = dataInt16.length / numChannels;
       const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-      
       for (let channel = 0; channel < numChannels; channel++) {
         const channelData = buffer.getChannelData(channel);
         for (let i = 0; i < frameCount; i++) {
           channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
         }
       }
-      
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
       source.onended = () => { ctx.close(); resolve(); };
       source.start();
     } catch (e) {
-      console.error("Audio Playback Error:", e);
+      console.error("Audio Error:", e);
       resolve();
     }
   });

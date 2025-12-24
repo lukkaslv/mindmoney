@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { translations } from '../translations.ts';
 
 interface LayoutProps {
@@ -9,15 +9,14 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
   const t = translations[lang];
-  
-  // Актуальный маркер версии
-  const BUILD_ID = "v1.0.8-ULTRA-STABLE";
+  const BUILD_ID = "v1.0.9-POLISHED";
+  const [showBuild, setShowBuild] = useState(false);
 
   const handleClearCache = () => {
-    if (confirm("ВНИМАНИЕ: Это полностью очистит сессию и перезагрузит приложение. Продолжить?")) {
+    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('warning');
+    if (confirm("ВНИМАНИЕ: Это полностью очистит сессию. Продолжить?")) {
       try {
         localStorage.clear();
-        // Принудительная перезагрузка без кэша
         window.location.href = window.location.href.split('?')[0] + '?t=' + new Date().getTime();
       } catch (e) {
         window.location.reload();
@@ -50,13 +49,18 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
         </div>
       </main>
       
-      <footer className="absolute bottom-4 left-0 right-0 text-center pointer-events-none z-0">
-        <div className="opacity-20 text-[9px] font-bold uppercase tracking-[0.3em]">
+      <footer 
+        className="absolute bottom-4 left-0 right-0 text-center z-0"
+        onClick={() => setShowBuild(!showBuild)}
+      >
+        <div className="opacity-20 text-[9px] font-bold uppercase tracking-[0.3em] cursor-pointer">
           Psychology Lab • {lang.toUpperCase()}
         </div>
-        <div className="opacity-10 text-[7px] font-mono mt-1 uppercase">
-          Build ID: {BUILD_ID}
-        </div>
+        {showBuild && (
+          <div className="opacity-40 text-[7px] font-mono mt-1 uppercase text-indigo-500 font-bold">
+            Build: {BUILD_ID}
+          </div>
+        )}
       </footer>
     </div>
   );

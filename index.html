@@ -8,6 +8,15 @@
     <script>
       // Безопасная инициализация process для браузера
       window.process = window.process || { env: {} };
+      
+      // Отлов глобальных ошибок до загрузки React
+      window.onerror = function(msg, url, line) {
+        const errDiv = document.getElementById('critical-error');
+        if (errDiv) {
+          errDiv.style.display = 'block';
+          errDiv.innerHTML = '<b>Системная ошибка:</b> ' + msg + '<br><small>' + url + ':' + line + '</small>';
+        }
+      };
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -62,16 +71,6 @@
         to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
       }
 
-      .pulse-indigo {
-        animation: pulseIndigo 2s infinite;
-      }
-
-      @keyframes pulseIndigo {
-        0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
-        70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-      }
-
       .audio-wave-bar {
         width: 4px;
         background: var(--primary);
@@ -85,7 +84,6 @@
         50% { height: 16px; }
       }
 
-      /* Скрытие скроллбара */
       ::-webkit-scrollbar { display: none; }
       
       .safe-area-bottom {
@@ -104,8 +102,11 @@
       }
     }
     </script>
+    <!-- ЭТА СТРОКА БЫЛА ПРОПУЩЕНА И ЭТО ПРИЧИНА БЕЛОГО ЭКРАНА -->
+    <script type="module" src="./index.tsx"></script>
   </head>
   <body>
+    <div id="critical-error" style="display:none; position:fixed; top:0; left:0; right:0; background: #fee2e2; color: #991b1b; padding: 20px; font-family: monospace; z-index: 9999; font-size: 12px; border-bottom: 2px solid #ef4444;"></div>
     <div id="root"></div>
   </body>
 </html>

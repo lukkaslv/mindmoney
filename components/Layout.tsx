@@ -10,8 +10,8 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
   const t = translations[lang];
   
-  // Новый маркер для проверки
-  const BUILD_ID = "v1.0.7-DIAGNOSTIC-MODE";
+  // Маркер версии
+  const BUILD_ID = "v1.0.7-CRITICAL-FIX";
 
   const handleClearCache = () => {
     if (confirm("Очистить данные сессии и начать заново?")) {
@@ -46,7 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
       </main>
       
       <footer className="absolute bottom-4 left-0 right-0 text-center pointer-events-none z-0">
-        <div className="opacity-20 text-[9px] font-bold uppercase tracking-[0.3em]">
+        <div className="opacity-20 text-[9px] font-black uppercase tracking-[0.3em]">
           Money Psychology Lab • {lang.toUpperCase()}
         </div>
         <div className="opacity-10 text-[7px] font-mono mt-1 uppercase">

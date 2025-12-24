@@ -14,8 +14,8 @@ declare global {
   }
 }
 
-const APP_PASSWORD = "money"; 
-const BOOKING_URL = "https://t.me/your_telegram_username"; 
+// Константы для админа (в реальности лучше хранить вовне, но здесь это "ключ от сейфа")
+const MASTER_KEY = "admin777";
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => {
@@ -23,9 +23,18 @@ const App: React.FC = () => {
   });
   
   const t = translations[lang];
+
+  // Динамические настройки из localStorage
+  const [clientPassword, setClientPassword] = useState(() => localStorage.getItem('cfg_client_pass') || "money");
+  const [bookingUrl, setBookingUrl] = useState(() => localStorage.getItem('cfg_booking_url') || "https://t.me/your_username");
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     try { return localStorage.getItem('is_auth') === 'true'; } catch (e) { return false; }
   });
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try { return localStorage.getItem('is_admin') === 'true'; } catch (e) { return false; }
+  });
+
   const [passwordInput, setPasswordInput] = useState("");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
@@ -63,10 +72,42 @@ const App: React.FC = () => {
     if (loading) {
       interval = setInterval(() => {
         setLoadingStep(s => (s + 1) % t.loadingSteps.length);
-      }, 1000); // Быстрая анимация для локального режима
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [loading, t.loadingSteps.length]);
+
+  const handleLogin = () => {
+    const input = passwordInput.toLowerCase().trim();
+    if (input === MASTER_KEY) {
+      setIsAdmin(true);
+      setIsAuthenticated(true);
+      localStorage.setItem('is_admin', 'true');
+      localStorage.setItem('is_auth', 'true');
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+    } else if (input === clientPassword) {
+      setIsAdmin(false);
+      setIsAuthenticated(true);
+      localStorage.setItem('is_admin', 'false');
+      localStorage.setItem('is_auth', 'true');
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+    } else {
+      window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
+    }
+  };
+
+  const saveAdminSettings = () => {
+    localStorage.setItem('cfg_client_pass', clientPassword);
+    localStorage.setItem('cfg_booking_url', bookingUrl);
+    alert("Настройки сохранены!");
+    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+  };
+
+  const copyInvite = () => {
+    const text = `Привет! Приглашаю тебя пройти психологический тренажер "MoneyMindset".\n\nПароль для входа: ${clientPassword}\nСсылка: ${window.location.href}`;
+    navigator.clipboard.writeText(text);
+    alert("Приглашение скопировано!");
+  };
 
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
@@ -87,49 +128,17 @@ const App: React.FC = () => {
       if (!nextId || nextId === 'end') {
         setState(prev => ({ ...prev, history: newHistory, isFinished: true }));
         setLoading(true);
-        // Мгновенная локальная обработка
         const data = await getPsychologicalFeedback(newHistory);
         setAnalysisData(data);
         const image = await generateMindsetAnchor(data.keyBelief);
         setAnchorImage(image);
-        setTimeout(() => setLoading(false), 2000); // Имитация "глубокого анализа" для веса результата
+        setTimeout(() => setLoading(false), 2000);
       } else {
         setState(prev => ({ ...prev, currentSceneId: nextId, history: newHistory }));
       }
       setIsTransitioning(false);
     }, 400);
-  }, [intermediateFeedback, state, t.loadingSteps.length]);
-
-  const handleChoice = (choice: Choice) => {
-    setSelectedChoiceId(choice.id);
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
-    setTimeout(() => {
-      setIntermediateFeedback({
-        text: choice.text,
-        nextId: choice.nextSceneId,
-        belief: choice.beliefKey,
-        userReflection: "",
-        bodySensation: ""
-      });
-    }, 400);
-  };
-
-  const handleLogin = () => {
-    if (passwordInput.toLowerCase().trim() === APP_PASSWORD) {
-      setIsAuthenticated(true);
-      try { localStorage.setItem('is_auth', 'true'); } catch (e) {}
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-    } else {
-      window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
-    }
-  };
-
-  const handleCopyResult = () => {
-    if (!analysisData) return;
-    const text = `Инсайт: "${analysisData.keyBelief}"\n\nАнализ: ${analysisData.analysisText}\n\nПрактика: ${analysisData.actionStep}`;
-    navigator.clipboard.writeText(text);
-    alert("Скопировано!");
-  };
+  }, [intermediateFeedback, state]);
 
   const ScoreBar = ({ label, value, color }: { label: string, value: number, color: string }) => (
     <div className="space-y-1.5">
@@ -143,6 +152,63 @@ const App: React.FC = () => {
     </div>
   );
 
+  // Рендер админ-панели
+  if (isAdmin && isAuthenticated) {
+    return (
+      <Layout lang={lang}>
+        <div className="space-y-8 pb-10 scene-transition">
+          <div className="text-center">
+            <h2 className="text-3xl font-black tracking-tighter mb-1">{t.adminTitle}</h2>
+            <div className="flex justify-center gap-2 mt-4">
+              {['ru', 'ka'].map((l) => (
+                <button key={l} onClick={() => { setLang(l as any); localStorage.setItem('app_lang', l); }} className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${lang === l ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="game-card p-6 space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-black uppercase text-xs text-indigo-600">{t.adminStats}</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-4 rounded-2xl">
+                  <p className="text-[10px] font-black opacity-30 uppercase">Статус</p>
+                  <p className="text-lg font-black text-green-500">Active</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl">
+                  <p className="text-[10px] font-black opacity-30 uppercase">Режим</p>
+                  <p className="text-lg font-black">Offline</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 pt-4 border-t border-slate-50">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">{t.adminPassLabel}</label>
+                <input type="text" value={clientPassword} onChange={(e) => setClientPassword(e.target.value)} className="w-full p-4 bg-slate-50 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">{t.adminContactLabel}</label>
+                <input type="text" value={bookingUrl} onChange={(e) => setBookingUrl(e.target.value)} className="w-full p-4 bg-slate-50 rounded-xl font-bold border-none outline-none focus:ring-2 focus:ring-indigo-100" />
+              </div>
+              <button onClick={saveAdminSettings} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-all">{t.adminSave}</button>
+            </div>
+          </div>
+
+          <div className="game-card p-6 space-y-4">
+             <h3 className="font-black uppercase text-xs text-indigo-600">{t.adminClientLink}</h3>
+             <div className="p-4 bg-slate-50 rounded-xl text-[11px] font-medium text-slate-500 italic leading-relaxed">
+               "Привет! Приглашаю тебя пройти... Пароль: {clientPassword}..."
+             </div>
+             <button onClick={copyInvite} className="w-full py-4 bg-white border border-slate-100 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">{t.adminCopyLink}</button>
+          </div>
+
+          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="w-full py-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">Выйти из панели</button>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Экран логина
   if (!isAuthenticated) {
     return (
       <Layout lang={lang}>
@@ -160,6 +226,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Финальный экран (Результат)
   if (state.isFinished) {
     return (
       <Layout lang={lang}>
@@ -198,8 +265,12 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-3 pt-2">
-                <button onClick={handleCopyResult} className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">📋 Сохранить инсайт</button>
-                <button onClick={() => window.Telegram?.WebApp?.openLink(BOOKING_URL)} className="w-full py-5 bg-white border border-slate-100 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm">📅 {t.bookSession}</button>
+                <button onClick={() => { 
+                    const text = `Инсайт: "${analysisData.keyBelief}"\n\nАнализ: ${analysisData.analysisText}\n\nПрактика: ${analysisData.actionStep}`;
+                    navigator.clipboard.writeText(text);
+                    alert("Скопировано!");
+                 }} className="w-full py-5 bg-indigo-50 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest">📋 Сохранить инсайт</button>
+                <button onClick={() => window.Telegram?.WebApp?.openLink(bookingUrl)} className="w-full py-5 bg-white border border-slate-100 text-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm">📅 {t.bookSession}</button>
                 <button onClick={() => window.location.reload()} className="w-full py-3 text-[9px] font-black text-slate-300 uppercase tracking-widest">Пройти еще раз</button>
               </div>
             </div>
@@ -209,6 +280,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Экран ввода рефлексии (между сценами)
   if (intermediateFeedback) {
     return (
       <Layout lang={lang}>
@@ -236,8 +308,8 @@ const App: React.FC = () => {
     );
   }
 
+  // Экран выбора сцены (Игра)
   const scene = INITIAL_SCENES[state.currentSceneId];
-
   return (
     <Layout lang={lang}>
       <div className={`space-y-8 transition-all duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
@@ -251,7 +323,19 @@ const App: React.FC = () => {
           </div>
           <div className="grid gap-3">
             {scene.choices.map((choice) => (
-              <button key={choice.id} onClick={() => handleChoice(choice)} className="w-full p-5 text-left rounded-2xl flex items-center bg-white border border-slate-50 text-slate-700 active:scale-95 transition-all shadow-sm"><span className="font-black text-xs flex-1">{choice.text}</span><span className="opacity-20 ml-3">→</span></button>
+              <button key={choice.id} onClick={() => {
+                setSelectedChoiceId(choice.id);
+                window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+                setTimeout(() => {
+                  setIntermediateFeedback({
+                    text: choice.text,
+                    nextId: choice.nextSceneId,
+                    belief: choice.beliefKey,
+                    userReflection: "",
+                    bodySensation: ""
+                  });
+                }, 400);
+              }} className="w-full p-5 text-left rounded-2xl flex items-center bg-white border border-slate-50 text-slate-700 active:scale-95 transition-all shadow-sm"><span className="font-black text-xs flex-1">{choice.text}</span><span className="opacity-20 ml-3">→</span></button>
             ))}
           </div>
         </div>

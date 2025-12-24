@@ -31,7 +31,14 @@ export const translations = {
       shoulders: "Напряжение в плечах",
       warmth: "Прилив тепла",
       none: "Спокойствие"
-    }
+    },
+    adminTitle: "Панель Психолога",
+    adminPassLabel: "Пароль для клиентов",
+    adminContactLabel: "Ссылка на запись (URL)",
+    adminSave: "Сохранить настройки",
+    adminStats: "Статистика системы",
+    adminClientLink: "Текст для клиента",
+    adminCopyLink: "Скопировать приглашение"
   },
   ka: {
     title: "MoneyMindset 💎",
@@ -64,6 +71,13 @@ export const translations = {
       shoulders: "დაჭიმულობა მხრებში",
       warmth: "სითბოს მოზღვავება",
       none: "სიმშვიდე"
-    }
+    },
+    adminTitle: "ფსიქოლოგის პანელი",
+    adminPassLabel: "კოდი კლიენტებისთვის",
+    adminContactLabel: "ჩაწერის ბმული",
+    adminSave: "შენახვა",
+    adminStats: "სტატისტიკა",
+    adminClientLink: "ტექსტი კლიენტისთვის",
+    adminCopyLink: "ბმულის კოპირება"
   }
 };

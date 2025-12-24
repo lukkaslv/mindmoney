@@ -1,150 +1,117 @@
 
-export interface AnalysisResult {
-  archetypeKey: string;
-  patternKey: string;
-  trapKey: string;
-  scenarioKey: string;
-  scoreSafety: number;
-  scorePermission: number;
-  scoreAmbition: number;
-  stressLevel: number;
-  levels: {
-    safety: 'low' | 'mid' | 'high';
-    permission: 'low' | 'mid' | 'high';
-    ambition: 'low' | 'mid' | 'high';
-  };
-  reflectionMirror: {
-    sceneTitle: string;
-    thought: string;
-    sensation: string;
-    insight: string;
-    confrontation: string;
-  }[];
-  // Координаты для SVG кристалла (0-100)
-  crystalPoints: { x: number; y: number }[];
-  roadmap: {
-    title: string;
-    steps: { label: string; action: string; homework: string }[];
-  };
-  // Added missing fields to fix TypeScript error in getPsychologicalFeedback return value
-  analysisTextKeys: string[];
-  defenseMechanisms: string[];
+export interface LatticeEdge {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stress: number; // 0-1 (влияет на цвет и толщину)
 }
 
-const CONFRONTATIONS: Record<string, string> = {
-  'fear_of_punishment_throat': 'confront_voice_block',
-  'impulse_spend_warmth': 'confront_euphoria_trap',
-  'money_is_danger_cold': 'confront_survival_chill',
-  'poverty_is_virtue_shoulders': 'confront_moral_burden',
-  'imposter_syndrome_chest': 'confront_imposter_pressure',
-  'hard_work_only_shoulders': 'confront_work_weight',
-  'capacity_expansion_warmth': 'confront_expansion_glow',
-  'family_loyalty_throat': 'confront_loyalty_strangle'
+export interface AnalysisResult {
+  archetypeKey: string;
+  scenarioKey: string;
+  resistanceLevel: number; // 0-100 (Кривизна пути)
+  coherenceScore: number; // 0-100 (Целостность)
+  lattice: LatticeEdge[];
+  reflectionMirror: any[];
+  stats: { safety: number; power: number; permission: number };
+}
+
+// Векторные веса для тел (Body Vectors)
+const BODY_MAP: Record<string, { s: number, p: number, a: number }> = {
+  'throat': { s: -0.5, p: -0.8, a: -0.2 }, // Блок голоса
+  'chest': { s: -0.3, p: -0.2, a: -0.7 },  // Страх проявления
+  'stomach': { s: -0.9, p: -0.1, a: -0.1 }, // Базовая небезопасность
+  'shoulders': { s: -0.2, p: -0.6, a: 0.2 }, // Груз ответственности
+  'warmth': { s: 0.6, p: 0.8, a: 0.9 },    // Поток
+  'none': { s: 0, p: 0, a: 0 }             // Диссоциация
 };
 
-const TRAITS: Record<string, any> = {
-  'fear_of_punishment': { s: -20, p: -5, a: 0, insight: 'insight_punishment' },
-  'impulse_spend': { s: -10, p: 15, a: 10, insight: 'insight_impulse' },
-  'money_is_danger': { s: -30, p: -10, a: -5, insight: 'insight_danger' },
-  'poverty_is_virtue': { s: 10, p: -25, a: -15, insight: 'insight_virtue' },
-  'fear_of_conflict': { s: 5, p: -20, a: -10, insight: 'insight_conflict' },
-  'money_is_tool': { s: 15, p: 15, a: 15, insight: 'insight_tool' },
-  'imposter_syndrome': { s: -5, p: -25, a: 10, insight: 'insight_imposter' },
-  'hard_work_only': { s: -10, p: 5, a: 20, insight: 'insight_hardwork' },
-  'capacity_expansion': { s: 10, p: 25, a: 25, insight: 'insight_expansion' },
-  'family_loyalty': { s: 10, p: -30, a: -10, insight: 'insight_loyalty' },
-  'guilt_after_pleasure': { s: -15, p: -20, a: 5, insight: 'insight_guilt' },
-  'self_permission': { s: 20, p: 30, a: 20, insight: 'insight_permission' }
-};
-
-const getLevel = (val: number): 'low' | 'mid' | 'high' => {
-  if (val < 40) return 'low';
-  if (val < 70) return 'mid';
-  return 'high';
+const BELIEF_MAP: Record<string, { s: number, p: number, a: number }> = {
+  'capacity_expansion': { s: 0.2, p: 0.5, a: 1.0 },
+  'self_permission': { s: 0.3, p: 1.0, a: 0.4 },
+  'money_is_tool': { s: 0.8, p: 0.4, a: 0.4 },
+  'imposter_syndrome': { s: -0.2, p: -0.8, a: 0.1 },
+  'money_is_danger': { s: -1.0, p: -0.2, a: -0.4 },
+  'poverty_is_virtue': { s: 0.4, p: -1.0, a: -0.6 }
 };
 
 export async function getPsychologicalFeedback(history: any[], scenes: any): Promise<AnalysisResult> {
-  let safety = 50, permission = 50, ambition = 50;
-  let reflectionMirror: any[] = [];
+  let s = 50, p = 50, a = 50;
+  let points: {x: number, y: number, stress: number}[] = [{x: 50, y: 50, stress: 0}];
+  let totalCurvature = 0;
   
-  history.forEach(item => {
-    const t = TRAITS[item.beliefKey];
-    if (t) {
-      safety = Math.max(10, Math.min(100, safety + t.s));
-      permission = Math.max(10, Math.min(100, permission + t.p));
-      ambition = Math.max(10, Math.min(100, ambition + t.a));
-      
-      const s = item.bodySensation || "";
-      const sKey = (s.includes('горле') || s.includes('ყელში')) ? 'throat' :
-                   (s.includes('тепла') || s.includes('სითბოს')) ? 'warmth' :
-                   (s.includes('Холод') || s.includes('სიცივე')) ? 'cold' :
-                   (s.includes('плечах') || s.includes('მხრებზე')) ? 'shoulders' :
-                   (s.includes('Давление') || s.includes('ზეწოლა')) ? 'chest' : 'none';
+  const processed = history.map((h, i) => {
+    const bWeights = BELIEF_MAP[h.beliefKey] || { s: 0, p: 0, a: 0 };
+    
+    const bodyStr = h.bodySensation || "";
+    let bKey = 'none';
+    if (bodyStr.includes('горле') || bodyStr.includes('ყელში')) bKey = 'throat';
+    else if (bodyStr.includes('тепла') || bodyStr.includes('სითბოს')) bKey = 'warmth';
+    else if (bodyStr.includes('Холод') || bodyStr.includes('სიცივე')) bKey = 'stomach';
+    else if (bodyStr.includes('плечах') || bodyStr.includes('მხრებზე')) bKey = 'shoulders';
+    else if (bodyStr.includes('груди') || bodyStr.includes('მკერდში')) bKey = 'chest';
+    
+    const bodyWeights = BODY_MAP[bKey];
+    
+    // Расчет угла между намерением (Belief) и состоянием (Body)
+    // Скалярное произведение для оценки когерентности
+    const dotProduct = (bWeights.s * bodyWeights.s) + (bWeights.p * bodyWeights.p) + (bWeights.a * bodyWeights.a);
+    const stress = dotProduct < 0 ? Math.abs(dotProduct) : 0;
+    totalCurvature += stress;
 
-      const confKey = `${item.beliefKey}_${sKey}`;
+    // Обновляем координаты
+    s = Math.max(10, Math.min(100, s + (bWeights.s * 15) + (bodyWeights.s * 5)));
+    p = Math.max(10, Math.min(100, p + (bWeights.p * 15) + (bodyWeights.p * 5)));
+    a = Math.max(10, Math.min(100, a + (bWeights.a * 15) + (bodyWeights.a * 5)));
 
-      reflectionMirror.push({
-        sceneTitle: scenes[item.sceneId]?.titleKey || "",
-        thought: item.userReflection || "...",
-        sensation: item.bodySensation || "",
-        insight: t.insight,
-        confrontation: CONFRONTATIONS[confKey] || 'confront_default'
-      });
-    }
+    // Генерация точки в 2D проекции 3D пространства
+    const angle = (i / history.length) * Math.PI * 2;
+    const radius = 10 + (s + p + a) / 6;
+    points.push({
+      x: 50 + Math.cos(angle) * radius,
+      y: 50 + Math.sin(angle) * radius,
+      stress
+    });
+
+    return { ...h, stress };
   });
 
-  // Расчет точек кристалла (Radar Chart Geometry)
-  // 3 оси: Safety (Top), Permission (Bottom Right), Ambition (Bottom Left)
-  const centerX = 50, centerY = 50, radius = 40;
-  const crystalPoints = [
-    { x: centerX, y: centerY - (radius * safety / 100) }, // Safety
-    { x: centerX + (radius * permission / 100) * Math.cos(Math.PI/6), y: centerY + (radius * permission / 100) * Math.sin(Math.PI/6) }, // Permission
-    { x: centerX - (radius * ambition / 100) * Math.cos(Math.PI/6), y: centerY + (radius * ambition / 100) * Math.sin(Math.PI/6) } // Ambition
-  ];
+  // Генерация решетки (Lattice)
+  const lattice: LatticeEdge[] = [];
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      const dist = Math.sqrt(Math.pow(points[i].x - points[j].x, 2) + Math.pow(points[i].y - points[j].y, 2));
+      if (dist < 45) { // Связываем только близкие узлы
+        lattice.push({
+          x1: points[i].x, y1: points[i].y,
+          x2: points[j].x, y2: points[j].y,
+          stress: (points[i].stress + points[j].stress) / 2
+        });
+      }
+    }
+  }
 
-  const levels = {
-    safety: getLevel(safety),
-    permission: getLevel(permission),
-    ambition: getLevel(ambition)
-  };
-
-  let scenario = "stable_path";
-  if (levels.safety === 'low' && levels.ambition === 'high') scenario = "sacrifice_run";
-  if (levels.permission === 'low' && levels.safety === 'high') scenario = "invisible_wealth";
-  if (levels.safety === 'low' && levels.permission === 'low') scenario = "constant_crisis";
+  const coherence = Math.max(0, 100 - (totalCurvature * 15));
+  const finalStats = { safety: Math.round(s), power: Math.round(a), permission: Math.round(p) };
 
   let archetype = "observer";
-  let trap = "none";
-  let pattern = "neutral";
-
-  if (levels.safety === 'low' && levels.ambition === 'high') { archetype = "achiever"; trap = "anxious_achievement"; pattern = "burnout"; }
-  else if (levels.permission === 'low' && levels.safety === 'high') { archetype = "keeper"; trap = "fear_of_joy"; pattern = "golden_cage"; }
-  else if (levels.safety === 'low' && levels.permission === 'low') { archetype = "prisoner"; trap = "scarcity_mindset"; pattern = "survival"; }
-  else if (levels.ambition === 'high' && levels.permission === 'high') { archetype = "expander"; trap = "inflation_of_self"; pattern = "expansion"; }
-
-  const roadmapSteps = [];
-  if (levels.safety === 'low') roadmapSteps.push({ label: "step_safety_title", action: "step_safety_desc", homework: "hw_safety" });
-  if (levels.permission === 'low') roadmapSteps.push({ label: "step_perm_title", action: "step_perm_desc", homework: "hw_perm" });
-  if (levels.ambition === 'low') roadmapSteps.push({ label: "step_amb_title", action: "step_amb_desc", homework: "hw_amb" });
-  if (roadmapSteps.length === 0) roadmapSteps.push({ label: "step_master_title", action: "step_master_desc", homework: "hw_master" });
+  if (finalStats.power > 75 && coherence < 50) archetype = "achiever";
+  else if (finalStats.permission < 40 && finalStats.safety > 60) archetype = "keeper";
+  else if (finalStats.power > 70 && finalStats.permission > 70) archetype = "expander";
+  else if (finalStats.safety < 35) archetype = "prisoner";
 
   return {
     archetypeKey: archetype,
-    patternKey: pattern,
-    trapKey: trap,
-    scenarioKey: scenario,
-    scoreSafety: safety,
-    scorePermission: permission,
-    scoreAmbition: ambition,
-    stressLevel: 100 - safety,
-    levels,
-    reflectionMirror: reflectionMirror.slice(-4),
-    analysisTextKeys: [],
-    defenseMechanisms: [],
-    crystalPoints,
-    roadmap: {
-      title: "roadmap_main_title",
-      steps: roadmapSteps
-    }
+    scenarioKey: finalStats.safety > 50 ? "stable_path" : "constant_crisis",
+    resistanceLevel: Math.round(totalCurvature * 20),
+    coherenceScore: Math.round(coherence),
+    lattice,
+    stats: finalStats,
+    reflectionMirror: processed.slice(-3).map(p => ({
+      sceneTitle: scenes[p.sceneId]?.titleKey,
+      thought: p.userReflection,
+      isConflict: p.stress > 0.3
+    })),
   };
 }

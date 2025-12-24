@@ -3,62 +3,36 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { translations } from './translations.ts';
-import { getPsychologicalFeedback, AnalysisResult } from './services/psychologyService.ts';
+import { getPsychologicalFeedback, AnalysisResult, LatticeEdge } from './services/psychologyService.ts';
 
-declare global {
-  interface Window {
-    Telegram: { WebApp: any; };
-  }
-}
+declare global { interface Window { Telegram: { WebApp: any; }; } }
 
-const MASTER_KEY = "admin777";
-
-const getTranslation = (obj: any, path: string) => {
-  if (!path) return "";
-  const result = path.split('.').reduce((prev, curr) => prev && prev[curr], obj);
-  return typeof result === 'string' ? result : path;
-};
-
-// Компонент Кристалла
-const IdentityCrystal: React.FC<{ points: { x: number; y: number }[], scores: any, labels: any }> = ({ points, scores, labels }) => {
-  const polyPoints = points.map(p => `${p.x},${p.y}`).join(' ');
-  
+const IdentityLattice: React.FC<{ edges: LatticeEdge[], coherence: number }> = ({ edges, coherence }) => {
   return (
-    <div className="relative w-full aspect-square flex items-center justify-center p-8 bg-slate-900/50 rounded-[3rem] border border-white/5">
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-        {/* Сетка */}
-        <circle cx="50" cy="50" r="40" fill="none" stroke="white" strokeWidth="0.1" strokeDasharray="1 2" opacity="0.2" />
-        <circle cx="50" cy="50" r="20" fill="none" stroke="white" strokeWidth="0.1" strokeDasharray="1 2" opacity="0.1" />
-        <line x1="50" y1="50" x2="50" y2="10" stroke="white" strokeWidth="0.1" opacity="0.2" />
-        <line x1="50" y1="50" x2="84.6" y2="70" stroke="white" strokeWidth="0.1" opacity="0.2" />
-        <line x1="50" y1="50" x2="15.4" y2="70" stroke="white" strokeWidth="0.1" opacity="0.2" />
-
-        {/* Форма кристалла */}
-        <polygon 
-          points={polyPoints} 
-          fill="url(#crystalGradient)" 
-          stroke="white" 
-          strokeWidth="0.5"
-          className="animate-in fade-in zoom-in duration-1000"
-        />
-        
-        {/* Точки на вершинах */}
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="white" className="animate-pulse" />
+    <div className="relative w-full aspect-square flex items-center justify-center bg-[#0a0a10] rounded-[3.5rem] overflow-hidden border border-white/5 shadow-2xl">
+      <svg viewBox="0 0 100 100" className="w-full h-full p-4">
+        {edges.map((e, i) => (
+          <line 
+            key={i} 
+            x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} 
+            stroke={e.stress > 0.4 ? "#ef4444" : "#6366f1"} 
+            strokeWidth={0.3 + (1 - e.stress) * 0.5} 
+            strokeOpacity={0.1 + (1 - e.stress) * 0.6}
+            className="animate-in fade-in duration-1000"
+          />
         ))}
-
-        <defs>
-          <linearGradient id="crystalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#4f46e5" stopOpacity="0.8" />
-          </linearGradient>
-        </defs>
+        {/* Центральный узел */}
+        <circle cx="50" cy="50" r="1.5" fill="#818cf8" className="animate-pulse" />
       </svg>
-      
-      {/* Метки параметров */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.safety}: {scores.safety}</div>
-      <div className="absolute bottom-10 right-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.permission}: {scores.permission}</div>
-      <div className="absolute bottom-10 left-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">{labels.ambition}: {scores.ambition}</div>
+      <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
+        <div className="space-y-1">
+          <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Integrity</span>
+          <div className="text-xl font-black text-white italic">{coherence}%</div>
+        </div>
+        <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${coherence}%` }}></div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -66,25 +40,17 @@ const IdentityCrystal: React.FC<{ points: { x: number; y: number }[], scores: an
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem('app_lang') as 'ru' | 'ka') || 'ru');
   const t = useMemo(() => translations[lang], [lang]);
-
-  useEffect(() => { 
-    localStorage.setItem('app_lang', lang);
-    document.body.setAttribute('lang', lang);
-  }, [lang]);
-
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('is_auth') === 'true');
   const [passwordInput, setPasswordInput] = useState("");
   const [state, setState] = useState<any>({ currentSceneId: 'welcome', history: [], isFinished: false });
   const [intermediateFeedback, setIntermediateFeedback] = useState<any>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
 
   const handleLogin = () => {
-    if (passwordInput.toLowerCase().trim() === MASTER_KEY || passwordInput === "money") {
+    if (passwordInput.toLowerCase().trim() === "admin777" || passwordInput === "money") {
       setIsAuthenticated(true);
       localStorage.setItem('is_auth', 'true');
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('success');
     } else {
       window.Telegram?.WebApp?.showAlert?.(t.wrongPassword);
     }
@@ -92,8 +58,6 @@ const App: React.FC = () => {
 
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
-    
     const newHistory = [...state.history, { 
       sceneId: state.currentSceneId, 
       beliefKey: intermediateFeedback.belief,
@@ -103,210 +67,131 @@ const App: React.FC = () => {
 
     if (!intermediateFeedback.nextId || intermediateFeedback.nextId === 'end') {
       setLoading(true);
-      try {
-        const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
-        setAnalysisData(data);
-        
-        let step = 0;
-        const totalSteps = t.loadingSteps.length;
-        const timer = setInterval(() => {
-          setLoadingStep(s => (s + 1) % totalSteps);
-          step++;
-          if (step >= totalSteps * 2) {
-            clearInterval(timer);
-            setLoading(false);
-            setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
-          }
-        }, 800);
-      } catch (e) {
+      const data = await getPsychologicalFeedback(newHistory, INITIAL_SCENES);
+      setAnalysisData(data);
+      setTimeout(() => {
         setLoading(false);
-        window.Telegram?.WebApp?.showAlert?.("Error in analysis engine.");
-      }
+        setState((prev: any) => ({ ...prev, history: newHistory, isFinished: true }));
+      }, 2500);
     } else {
-      const nextId = intermediateFeedback.nextId;
+      setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
       setIntermediateFeedback(null);
-      setState((prev: any) => ({ ...prev, currentSceneId: nextId, history: newHistory }));
     }
-  }, [intermediateFeedback, state, t.loadingSteps.length]);
+  }, [intermediateFeedback, state.currentSceneId, state.history, INITIAL_SCENES]);
 
-  if (!isAuthenticated) {
-    return (
-      <Layout lang={lang} onLangChange={setLang}>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 animate-in fade-in duration-1000">
-          <div className="relative group">
-            <div className="w-28 h-28 bg-white rounded-[2.5rem] shadow-3xl flex items-center justify-center text-5xl border border-white/60 relative z-10">💎</div>
-            <div className="absolute inset-0 bg-indigo-400 blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-          </div>
-          <div className="w-full space-y-8 text-center px-4">
-            <h2 className="text-4xl font-[900] text-slate-800 tracking-tight leading-none uppercase italic">{t.enterPassword}</h2>
-            <div className="space-y-4">
-               <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••" className="w-full p-8 bg-white/80 border-2 border-white rounded-[2.5rem] text-center font-black text-4xl outline-none focus:ring-8 focus:ring-indigo-50 transition-all shadow-inner" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
-               <button onClick={handleLogin} className="w-full btn-primary py-7 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] active:scale-95 transition-all shadow-2xl">{t.accessBtn}</button>
-            </div>
-          </div>
+  if (!isAuthenticated) return (
+    <Layout lang={lang} onLangChange={setLang}>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 animate-in fade-in duration-700">
+        <div className="w-20 h-20 bg-slate-900 rounded-[2rem] flex items-center justify-center text-3xl shadow-2xl">💎</div>
+        <div className="w-full space-y-8 px-4">
+          <h2 className="text-3xl font-black text-slate-800 text-center uppercase italic tracking-tighter">{t.enterPassword}</h2>
+          <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full p-8 bg-white border-2 border-slate-100 rounded-[2.5rem] text-center text-4xl font-black outline-none focus:ring-8 focus:ring-indigo-50 transition-all shadow-inner" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+          <button onClick={handleLogin} className="w-full btn-primary py-7 text-white rounded-[2.5rem] font-black uppercase tracking-widest">{t.accessBtn}</button>
         </div>
-      </Layout>
-    );
-  }
+      </div>
+    </Layout>
+  );
 
-  if (loading) {
-    return (
-      <Layout lang={lang} onLangChange={setLang}>
-        <div className="game-card p-12 flex flex-col items-center justify-center space-y-12 min-h-[500px] border-none shadow-none bg-transparent">
-          <div className="relative w-40 h-40">
-            <div className="absolute inset-0 border-[12px] border-indigo-50 rounded-full"></div>
-            <div className="absolute inset-0 border-[12px] border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center text-4xl animate-bounce">🗝️</div>
-          </div>
-          <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.4em] text-center h-12 flex items-center">{t.loadingSteps[loadingStep]}</p>
+  if (loading) return (
+    <Layout lang={lang} onLangChange={setLang}>
+      <div className="flex flex-col items-center justify-center min-h-[500px] space-y-12">
+        <div className="relative w-32 h-32">
+          <div className="absolute inset-0 border-[3px] border-indigo-100 rounded-full"></div>
+          <div className="absolute inset-0 border-[3px] border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-indigo-600">ID</div>
         </div>
-      </Layout>
-    );
-  }
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse text-center">Сборка кристаллической структуры...</p>
+      </div>
+    </Layout>
+  );
 
-  if (state.isFinished && analysisData) {
-    return (
-      <Layout lang={lang} onLangChange={setLang}>
-        <div className="space-y-10 pb-32 animate-in fade-in slide-in-from-bottom-20 duration-1000">
-          
-          <section className="space-y-6">
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] px-4">{t.resultAnalysis}</h3>
-            <IdentityCrystal 
-              points={analysisData.crystalPoints} 
-              scores={{ safety: analysisData.scoreSafety, permission: analysisData.scorePermission, ambition: analysisData.scoreAmbition }} 
-              labels={t.statsLabels}
-            />
-          </section>
+  if (state.isFinished && analysisData) return (
+    <Layout lang={lang} onLangChange={setLang}>
+      <div className="space-y-12 pb-32 animate-in slide-in-from-bottom duration-1000">
+        <header className="space-y-6 px-4">
+          <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em]">{t.resultAnalysis}</h3>
+          <IdentityLattice edges={analysisData.lattice} coherence={analysisData.coherenceScore} />
+        </header>
 
-          <div className="game-card p-10 bg-slate-900 text-white shadow-3xl relative overflow-hidden">
-            <div className="relative z-10 space-y-6">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.resultArchetype}</span>
-                <span className="text-[10px] font-black opacity-30">CORE ID: {analysisData.archetypeKey.toUpperCase()}</span>
-              </div>
-              <h2 className="text-4xl font-[900] tracking-tighter leading-none italic uppercase">{(t as any).archetypes?.[analysisData.archetypeKey]}</h2>
-              <div className="pt-4 border-t border-white/10 flex flex-wrap gap-2">
-                <span className="px-4 py-2 bg-indigo-600 rounded-full text-[9px] font-black uppercase">{(t.scenarios as any)[analysisData.scenarioKey]}</span>
-                <span className="px-4 py-2 bg-white/10 rounded-full text-[9px] font-black uppercase">{(t.traps as any)[analysisData.trapKey]}</span>
+        <section className="game-card p-10 bg-[#0a0a0f] text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-600/10 blur-[80px] rounded-full"></div>
+          <div className="relative z-10 space-y-4">
+            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Resonant Archetype</span>
+            <h2 className="text-5xl font-black italic uppercase leading-none tracking-tighter">
+              {(t.archetypes as any)[analysisData.archetypeKey]}
+            </h2>
+            <div className="flex gap-4 pt-4">
+              <div className="px-4 py-2 bg-white/5 rounded-full text-[9px] font-black uppercase border border-white/10">
+                Resist: {analysisData.resistanceLevel}%
               </div>
             </div>
           </div>
+        </section>
 
-          <section className="space-y-6">
-             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] px-4">{t.reflectionMirrorTitle}</h3>
-             <div className="space-y-4">
-                {analysisData.reflectionMirror.map((m, i) => (
-                  <div key={i} className="game-card p-8 bg-white/40 border border-white hover:bg-white/70 transition-colors">
-                     <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{getTranslation(t, m.sceneTitle)}</span>
-                     <p className="text-xl font-medium text-slate-800 mt-2 italic leading-snug">"{m.thought}"</p>
-                     <div className="mt-6 p-5 bg-white/80 rounded-3xl border-l-4 border-indigo-600 shadow-sm">
-                        <p className="text-sm font-bold text-slate-900 leading-relaxed italic">{(t.confrontations as any)[m.confrontation]}</p>
-                     </div>
-                  </div>
-                ))}
-             </div>
-          </section>
+        <section className="space-y-6">
+          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] px-4">{t.reflectionMirrorTitle}</h3>
+          {analysisData.reflectionMirror.map((m, i) => (
+            <div key={i} className={`game-card p-8 border-l-4 transition-all ${m.isConflict ? 'border-red-500 bg-red-50/30' : 'border-indigo-600'}`}>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                {m.sceneTitle.split('.').reduce((p:any,c:any)=>p&&p[c], t)}
+              </p>
+              <p className="text-xl font-medium italic text-slate-800 leading-snug">"{m.thought || "..."}"</p>
+              {m.isConflict && (
+                <p className="mt-4 text-[11px] font-bold text-red-600 uppercase tracking-tight">Обнаружено сопротивление системы</p>
+              )}
+            </div>
+          ))}
+        </section>
 
-          <section className="space-y-8">
-             <div className="flex items-center gap-6 px-4">
-                <h3 className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.5em]">{t.resultRoadmap}</h3>
-                <div className="h-px bg-indigo-200 flex-1"></div>
-             </div>
-             <div className="grid gap-6">
-               {analysisData.roadmap.steps.map((step, i) => (
-                 <div key={i} className="game-card p-10 bg-white shadow-2xl relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-[5rem] -mr-10 -mt-10 group-hover:scale-110 transition-transform"></div>
-                    <div className="relative z-10 space-y-4">
-                       <span className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-xl mb-4">{i+1}</span>
-                       <h4 className="text-xl font-[900] text-slate-900 uppercase tracking-tight">{(t.roadmapSteps as any)[step.label]}</h4>
-                       <p className="text-slate-600 text-lg leading-relaxed">{(t.roadmapSteps as any)[step.action]}</p>
-                       <div className="mt-6 pt-6 border-t border-slate-100">
-                          <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">Практическое задание:</span>
-                          <p className="text-indigo-900 font-bold">{(t.roadmapSteps as any)[step.homework]}</p>
-                       </div>
-                    </div>
-                 </div>
-               ))}
-             </div>
-          </section>
-
-          <div className="grid gap-5 px-4">
-             <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/thndrrr")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-indigo-200 shadow-2xl">{t.bookBtn}</button>
-             <button onClick={() => window.location.reload()} className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center hover:text-indigo-600 transition-colors">{t.restartBtn}</button>
-          </div>
+        <div className="px-4 space-y-4">
+          <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/thndrrr")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black uppercase text-xs tracking-widest shadow-2xl">Личный разбор с Лукой</button>
+          <button onClick={() => window.location.reload()} className="w-full py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Перезагрузить Identity</button>
         </div>
-      </Layout>
-    );
-  }
+      </div>
+    </Layout>
+  );
 
-  if (intermediateFeedback) {
-    return (
-      <Layout lang={lang} onLangChange={setLang}>
-        <div className="flex flex-col space-y-8 h-full animate-in slide-in-from-right-20 duration-700">
-          <div className="game-card p-10 flex-1 flex flex-col space-y-10 bg-white/60">
-            <div className="text-center space-y-3">
-              <h3 className="text-4xl font-[900] text-slate-900 tracking-tight">{t.reflectionTitle}</h3>
-              <p className="text-indigo-400 text-[11px] font-black uppercase tracking-widest">{t.reflectionSubtitle}</p>
-            </div>
-            
-            <div className="space-y-6">
-              <label className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] px-2">{t.bodyQuestion}</label>
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(t.bodySensations).map(([key, label]) => (
-                  <button key={key} onClick={() => {
-                    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
-                    setIntermediateFeedback({...intermediateFeedback, bodySensation: label});
-                  }} className={`p-6 rounded-[2rem] text-[12px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-white border-white text-slate-500 hover:border-indigo-100'}`}>{label}</button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-6 flex-1">
-              <label className="text-[11px] font-black text-slate-800 uppercase tracking-[0.2em] px-2">{t.thoughtQuestion}</label>
-              <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-full min-h-[150px] p-8 bg-white border-2 border-white rounded-[3rem] text-xl font-medium outline-none focus:ring-[12px] focus:ring-indigo-50 transition-all resize-none shadow-inner placeholder:text-slate-200" placeholder="..." />
+  if (intermediateFeedback) return (
+    <Layout lang={lang} onLangChange={setLang}>
+      <div className="flex flex-col space-y-6 h-full animate-in slide-in-from-right duration-500">
+        <div className="game-card p-10 flex-1 flex flex-col space-y-12">
+          <div className="space-y-6">
+            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.bodyQuestion}</label>
+            <div className="grid grid-cols-2 gap-3">
+              {Object.entries(t.bodySensations).map(([key, label]) => (
+                <button key={key} onClick={() => setIntermediateFeedback({...intermediateFeedback, bodySensation: label})} className={`p-5 rounded-3xl text-[11px] font-black transition-all border-2 ${intermediateFeedback.bodySensation === label ? 'bg-slate-900 border-slate-900 text-white shadow-xl' : 'bg-white border-slate-50 text-slate-500'}`}>{label}</button>
+              ))}
             </div>
           </div>
-          <button onClick={proceedToNext} className={`w-full py-8 rounded-[2.5rem] font-black uppercase text-xs tracking-[0.4em] transition-all active:scale-95 shadow-2xl ${intermediateFeedback.bodySensation ? 'btn-primary text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.confirmBtn}</button>
+          <div className="space-y-6 flex-1">
+            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{t.thoughtQuestion}</label>
+            <textarea value={intermediateFeedback.userReflection} onChange={(e) => setIntermediateFeedback({...intermediateFeedback, userReflection: e.target.value})} className="w-full h-full p-8 bg-slate-50 rounded-[3rem] text-xl font-medium outline-none focus:ring-4 focus:ring-indigo-100 transition-all resize-none shadow-inner" placeholder="..." />
+          </div>
         </div>
-      </Layout>
-    );
-  }
+        <button onClick={proceedToNext} className={`w-full py-8 rounded-[2.5rem] font-black uppercase text-xs tracking-widest transition-all ${intermediateFeedback.bodySensation ? 'btn-primary text-white' : 'bg-slate-200 text-slate-400 pointer-events-none'}`}>{t.confirmBtn}</button>
+      </div>
+    </Layout>
+  );
 
   const scene = INITIAL_SCENES[state.currentSceneId];
-  const totalScenes = Object.keys(INITIAL_SCENES).length;
-  const currentProgress = (state.history.length / totalScenes) * 100;
-
   return (
     <Layout lang={lang} onLangChange={setLang}>
-      <div className="space-y-10 animate-in fade-in zoom-in duration-700">
-        <div className="flex justify-between items-end px-4">
-           <div className="space-y-2">
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em] italic">Stage {state.history.length + 1} / {totalScenes}</span>
-              <h2 className="text-4xl font-[900] text-slate-800 uppercase tracking-tighter italic leading-none">{getTranslation(t, scene.titleKey)}</h2>
-           </div>
-           <div className="relative w-16 h-16 rounded-full border-4 border-indigo-50 flex items-center justify-center">
-              <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-pulse" style={{ clipPath: `inset(0 0 ${100-currentProgress}% 0)` }}></div>
-              <span className="text-[10px] font-black text-indigo-600">{Math.round(currentProgress)}%</span>
-           </div>
+      <div className="space-y-10 animate-in fade-in zoom-in duration-500">
+        <div className="px-4 space-y-2">
+          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic opacity-50">Step {state.history.length + 1}</span>
+          <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter leading-none italic">{scene.titleKey.split('.').reduce((p:any,c:any)=>p&&p[c], t)}</h2>
         </div>
-
-        <div className="relative rounded-[4rem] overflow-hidden aspect-[4/5] shadow-4xl border-[10px] border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v6/900/1200`} alt="Scene" className="object-cover w-full h-full grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/95 via-slate-900/10 to-transparent flex items-end p-10">
-            <p className="text-white text-2xl leading-relaxed font-medium drop-shadow-xl">{getTranslation(t, scene.descKey)}</p>
+        <div className="relative rounded-[4rem] overflow-hidden aspect-[4/5] shadow-2xl border-8 border-white group">
+          <img src={`https://picsum.photos/seed/${scene.id}_v20/900/1200`} className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent flex items-end p-10">
+            <p className="text-white text-2xl font-medium leading-tight">{scene.descKey.split('.').reduce((p:any,c:any)=>p&&p[c], t)}</p>
           </div>
         </div>
-
-        <div className="grid gap-5 px-1 pb-10">
-          {scene.choices.map((choice) => (
-            <button key={choice.id} onClick={() => {
-              window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('heavy');
-              setIntermediateFeedback({ text: getTranslation(t, choice.textKey), nextId: choice.nextSceneId, belief: choice.beliefKey, userReflection: "", bodySensation: "" });
-            }} className="w-full p-8 text-left rounded-[2.5rem] bg-white shadow-xl hover:shadow-indigo-100 border-2 border-white hover:border-indigo-200 transition-all group flex items-center justify-between active:scale-95">
-              <span className="font-[900] text-xl text-slate-800 group-hover:text-indigo-600 leading-tight pr-6">{getTranslation(t, choice.textKey)}</span>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 transition-colors">
-                 <span className="text-indigo-600 font-black text-xl group-hover:text-white">→</span>
-              </div>
+        <div className="grid gap-4 pb-10">
+          {scene.choices.map((c:any) => (
+            <button key={c.id} onClick={() => setIntermediateFeedback({ text: c.textKey.split('.').reduce((p:any,c:any)=>p&&p[c], t), nextId: c.nextSceneId, belief: c.beliefKey, userReflection: "", bodySensation: "" })} className="w-full p-8 text-left rounded-[2.5rem] bg-white shadow-lg hover:shadow-indigo-50 border-2 border-white hover:border-indigo-100 transition-all group flex items-center justify-between">
+              <span className="font-black text-lg text-slate-800 group-hover:text-indigo-600">{c.textKey.split('.').reduce((p:any,c:any)=>p&&p[c], t)}</span>
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">→</div>
             </button>
           ))}
         </div>

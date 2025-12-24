@@ -1,14 +1,14 @@
 
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Не удалось найти элемент root для монтирования приложения");
 }
 
-const root = ReactDOM.createRoot(rootElement);
+const root = createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <App />

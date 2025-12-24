@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Layout } from './components/Layout';
-import { INITIAL_SCENES } from './constants';
-import { Choice, GameState } from './types';
-import { translations } from './translations';
-import { getPsychologicalFeedback, textToSpeech, decodeBase64, playAudioBuffer, generateMindsetAnchor } from './services/geminiService';
+import { Layout } from './components/Layout.tsx';
+import { INITIAL_SCENES } from './constants.ts';
+import { Choice, GameState } from './types.ts';
+import { translations } from './translations.ts';
+import { getPsychologicalFeedback, textToSpeech, decodeBase64, playAudioBuffer, generateMindsetAnchor } from './services/geminiService.ts';
 
 declare global {
   interface Window {
@@ -49,8 +49,6 @@ const App: React.FC = () => {
   const [loadingStep, setLoadingStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -75,7 +73,6 @@ const App: React.FC = () => {
   const proceedToNext = useCallback(async () => {
     if (!intermediateFeedback) return;
     
-    // Haptic feedback for saving
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
 
     const { nextId, belief, userReflection, bodySensation } = intermediateFeedback;
@@ -145,8 +142,6 @@ const App: React.FC = () => {
 
   const handleChoice = (choice: Choice) => {
     setSelectedChoiceId(choice.id);
-    
-    // Психологический паттерн: выбор должен ощущаться
     const isFear = choice.beliefKey.includes('fear') || choice.beliefKey.includes('guilt');
     if (isFear) {
       window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy');

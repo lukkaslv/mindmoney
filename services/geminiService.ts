@@ -1,7 +1,16 @@
 
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Функция для безопасного получения ключа
+const getApiKey = () => {
+  try {
+    return process.env.API_KEY || "";
+  } catch (e) {
+    return "";
+  }
+};
+
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 export async function getPsychologicalFeedback(history: any[]) {
   const context = history.map(h => 
@@ -90,6 +99,7 @@ export async function textToSpeech(text: string) {
 }
 
 export function decodeBase64(base64: string) {
+  if (!base64) return new Uint8Array(0);
   const binaryString = atob(base64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -99,6 +109,7 @@ export function decodeBase64(base64: string) {
 }
 
 export async function playAudioBuffer(data: Uint8Array): Promise<void> {
+  if (!data || data.length === 0) return;
   return new Promise((resolve) => {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     const dataInt16 = new Int16Array(data.buffer);

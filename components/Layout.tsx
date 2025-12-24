@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { translations } from '../translations';
+import { translations } from '../translations.ts';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,7 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
       </header>
       
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-        <div className="p-6 pb-24"> {/* Отступ снизу для кнопок */}
+        <div className="p-6 pb-24">
           {children}
         </div>
       </main>

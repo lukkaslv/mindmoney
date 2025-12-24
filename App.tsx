@@ -7,7 +7,7 @@ import { getPsychologicalFeedback, AnalysisResult, LatticeEdge } from './service
 
 declare global { interface Window { Telegram: { WebApp: any; }; } }
 
-const IdentityLattice: React.FC<{ edges: LatticeEdge[], coherence: number }> = ({ edges, coherence }) => {
+const IdentityLattice: React.FC<{ edges: LatticeEdge[], coherence: number, elasticity: number }> = ({ edges, coherence, elasticity }) => {
   return (
     <div className="relative w-full aspect-square flex items-center justify-center bg-[#0a0a10] rounded-[3.5rem] overflow-hidden border border-white/5 shadow-2xl">
       <svg viewBox="0 0 100 100" className="w-full h-full p-4">
@@ -21,7 +21,6 @@ const IdentityLattice: React.FC<{ edges: LatticeEdge[], coherence: number }> = (
             className="animate-in fade-in duration-1000"
           />
         ))}
-        {/* Центральный узел */}
         <circle cx="50" cy="50" r="1.5" fill="#818cf8" className="animate-pulse" />
       </svg>
       <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
@@ -29,8 +28,9 @@ const IdentityLattice: React.FC<{ edges: LatticeEdge[], coherence: number }> = (
           <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Integrity</span>
           <div className="text-xl font-black text-white italic">{coherence}%</div>
         </div>
-        <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-500 transition-all duration-1000" style={{ width: `${coherence}%` }}></div>
+        <div className="text-right space-y-1">
+          <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">Elasticity</span>
+          <div className="text-xl font-black text-indigo-400 italic">{elasticity}%</div>
         </div>
       </div>
     </div>
@@ -77,12 +77,12 @@ const App: React.FC = () => {
       setState((prev: any) => ({ ...prev, currentSceneId: intermediateFeedback.nextId, history: newHistory }));
       setIntermediateFeedback(null);
     }
-  }, [intermediateFeedback, state.currentSceneId, state.history, INITIAL_SCENES]);
+  }, [intermediateFeedback, state.currentSceneId, state.history]);
 
   if (!isAuthenticated) return (
     <Layout lang={lang} onLangChange={setLang}>
-      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12 animate-in fade-in duration-700">
-        <div className="w-20 h-20 bg-slate-900 rounded-[2rem] flex items-center justify-center text-3xl shadow-2xl">💎</div>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-12">
+        <div className="w-20 h-20 bg-slate-900 rounded-[2rem] flex items-center justify-center text-3xl shadow-2xl text-white font-black italic">LS</div>
         <div className="w-full space-y-8 px-4">
           <h2 className="text-3xl font-black text-slate-800 text-center uppercase italic tracking-tighter">{t.enterPassword}</h2>
           <input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} className="w-full p-8 bg-white border-2 border-slate-100 rounded-[2.5rem] text-center text-4xl font-black outline-none focus:ring-8 focus:ring-indigo-50 transition-all shadow-inner" onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
@@ -98,9 +98,12 @@ const App: React.FC = () => {
         <div className="relative w-32 h-32">
           <div className="absolute inset-0 border-[3px] border-indigo-100 rounded-full"></div>
           <div className="absolute inset-0 border-[3px] border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-indigo-600">ID</div>
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-indigo-600 italic">LS</div>
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse text-center">Сборка кристаллической структуры...</p>
+        <div className="text-center space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 animate-pulse">Архитектура Identity</p>
+          <p className="text-[8px] font-bold text-slate-300 uppercase tracking-[0.3em]">Калибровка эластичности системы...</p>
+        </div>
       </div>
     </Layout>
   );
@@ -110,42 +113,46 @@ const App: React.FC = () => {
       <div className="space-y-12 pb-32 animate-in slide-in-from-bottom duration-1000">
         <header className="space-y-6 px-4">
           <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em]">{t.resultAnalysis}</h3>
-          <IdentityLattice edges={analysisData.lattice} coherence={analysisData.coherenceScore} />
+          <IdentityLattice edges={analysisData.lattice} coherence={analysisData.coherenceScore} elasticity={analysisData.elasticityIndex} />
         </header>
 
         <section className="game-card p-10 bg-[#0a0a0f] text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-600/10 blur-[80px] rounded-full"></div>
           <div className="relative z-10 space-y-4">
-            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Resonant Archetype</span>
+            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Psychotype Profile</span>
             <h2 className="text-5xl font-black italic uppercase leading-none tracking-tighter">
               {(t.archetypes as any)[analysisData.archetypeKey]}
             </h2>
-            <div className="flex gap-4 pt-4">
-              <div className="px-4 py-2 bg-white/5 rounded-full text-[9px] font-black uppercase border border-white/10">
-                Resist: {analysisData.resistanceLevel}%
-              </div>
-            </div>
+            <p className="text-xs text-slate-400 font-medium leading-relaxed opacity-80 italic">
+              Коэффициент Эластичности {analysisData.elasticityIndex}% указывает на {analysisData.elasticityIndex > 60 ? 'высокую' : 'ограниченную'} готовность психики к резкому масштабированию капитала.
+            </p>
           </div>
         </section>
 
-        <section className="space-y-6">
-          <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] px-4">{t.reflectionMirrorTitle}</h3>
-          {analysisData.reflectionMirror.map((m, i) => (
-            <div key={i} className={`game-card p-8 border-l-4 transition-all ${m.isConflict ? 'border-red-500 bg-red-50/30' : 'border-indigo-600'}`}>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                {m.sceneTitle.split('.').reduce((p:any,c:any)=>p&&p[c], t)}
-              </p>
-              <p className="text-xl font-medium italic text-slate-800 leading-snug">"{m.thought || "..."}"</p>
-              {m.isConflict && (
-                <p className="mt-4 text-[11px] font-bold text-red-600 uppercase tracking-tight">Обнаружено сопротивление системы</p>
-              )}
-            </div>
-          ))}
+        <section className="space-y-8 px-4">
+          <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.5em]">Вектор Развития</h3>
+          <div className="space-y-4">
+            {analysisData.roadmap.map((step, idx) => (
+              <div key={idx} className="relative pl-12 pb-8 last:pb-0 group">
+                <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-[10px] font-black text-indigo-400 group-last:after:hidden after:content-[''] after:absolute after:top-8 after:left-4 after:w-[1px] after:h-full after:bg-slate-200/20">
+                  {idx + 1}
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-black text-slate-800 uppercase italic">{(t as any).roadmapPaths[step.titleKey]}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed">{(t as any).roadmapPaths[step.descKey]}</p>
+                  <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                    <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Домашнее задание:</span>
+                    <p className="text-[11px] font-bold text-slate-700 italic leading-snug">{(t as any).roadmapPaths[step.homeworkKey]}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
         <div className="px-4 space-y-4">
           <button onClick={() => window.Telegram?.WebApp?.openLink?.("https://t.me/thndrrr")} className="w-full btn-primary py-8 text-white rounded-[2.5rem] font-black uppercase text-xs tracking-widest shadow-2xl">Личный разбор с Лукой</button>
-          <button onClick={() => window.location.reload()} className="w-full py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Перезагрузить Identity</button>
+          <button onClick={() => window.location.reload()} className="w-full py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Пройти диагностику заново</button>
         </div>
       </div>
     </Layout>
@@ -178,11 +185,11 @@ const App: React.FC = () => {
     <Layout lang={lang} onLangChange={setLang}>
       <div className="space-y-10 animate-in fade-in zoom-in duration-500">
         <div className="px-4 space-y-2">
-          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic opacity-50">Step {state.history.length + 1}</span>
+          <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic opacity-50 italic">Step {state.history.length + 1}</span>
           <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter leading-none italic">{scene.titleKey.split('.').reduce((p:any,c:any)=>p&&p[c], t)}</h2>
         </div>
         <div className="relative rounded-[4rem] overflow-hidden aspect-[4/5] shadow-2xl border-8 border-white group">
-          <img src={`https://picsum.photos/seed/${scene.id}_v20/900/1200`} className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" />
+          <img src={`https://picsum.photos/seed/${scene.id}_v30/900/1200`} className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-1000" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent flex items-end p-10">
             <p className="text-white text-2xl font-medium leading-tight">{scene.descKey.split('.').reduce((p:any,c:any)=>p&&p[c], t)}</p>
           </div>

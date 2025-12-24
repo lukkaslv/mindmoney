@@ -1,5 +1,5 @@
 
-// Автономный сервис психологического анализа v2.0
+// Автономный сервис психологического анализа v3.0 (Deep Insight)
 
 export interface AnalysisResult {
   analysisText: string;
@@ -9,69 +9,76 @@ export interface AnalysisResult {
   capacity: number;
   keyBelief: string;
   actionStep: string;
-  imageTheme: string;
   profileType: string;
+  archetype: string;
+  shadowSide: string;
 }
 
-const BELIEF_IMPACT: Record<string, any> = {
-  'fear_of_punishment': { safety: -20, permission: -10, ambition: 0, text: "Страх наказания блокирует спонтанность." },
-  'impulse_spend': { safety: -10, permission: 20, ambition: 10, text: "Импульсивность как попытка 'сбежать' от ресурса." },
-  'money_is_danger': { safety: -30, permission: -10, ambition: -10, text: "Деньги считываются системой как угроза выживанию." },
-  'poverty_is_virtue': { safety: 10, permission: -30, ambition: -20, text: "Скромность как защита от социального осуждения." },
-  'fear_of_conflict': { safety: 0, permission: -20, ambition: -10, text: "Границы размыты в угоду чужому мнению." },
-  'money_is_tool': { safety: 20, permission: 20, ambition: 20, text: "Ресурс воспринимается как нейтральный инструмент." },
-  'imposter_syndrome': { safety: -10, permission: -20, ambition: -5, text: "Обесценивание мешает занять свое место в иерархии." },
-  'hard_work_only': { safety: -20, permission: 10, ambition: 15, text: "Сценарий 'выживания через сверхусилия'." },
-  'capacity_expansion': { safety: 15, permission: 25, ambition: 30, text: "Готовность к управлению большими потоками." },
-  'family_loyalty': { safety: 10, permission: -30, ambition: -10, text: "Верность дефицитарному сценарию рода." },
-  'guilt_after_pleasure': { safety: -15, permission: -25, ambition: 0, text: "Запрет на витальную энергию и радость." },
-  'self_permission': { safety: 20, permission: 30, ambition: 20, text: "Внутренняя легализация права на изобилие." }
+const SCENARIO_IMPACT: Record<string, any> = {
+  'fear_of_punishment': { safety: -25, permission: -10, ambition: 5, shadow: "Страх проявления", text: "Ваша система безопасности блокирует успех, чтобы избежать воображаемого наказания." },
+  'impulse_spend': { safety: -15, permission: 25, ambition: 15, shadow: "Непереносимость ресурса", text: "Слив денег — это способ избавиться от напряжения, которое они вызывают." },
+  'money_is_danger': { safety: -35, permission: -15, ambition: -10, shadow: "Инстинкт выживания", text: "Для вашего подсознания быть богатым равносильно тому, чтобы быть мишенью." },
+  'poverty_is_virtue': { safety: 15, permission: -35, ambition: -20, shadow: "Моральное превосходство", text: "Вы используете бедность как доказательство своей духовности и чистоты." },
+  'fear_of_conflict': { safety: 5, permission: -25, ambition: -15, shadow: "Угодничество", text: "Отказ от денег — это цена, которую вы платите за 'мир' с окружающими." },
+  'money_is_tool': { safety: 25, permission: 20, ambition: 20, shadow: "Рационализация", text: "Вы умеете видеть возможности там, где другие видят препятствия." },
+  'imposter_syndrome': { safety: -10, permission: -30, ambition: 5, shadow: "Обесценивание", text: "Внутренний критик съедает львиную долю вашей энергии, предназначенной для роста." },
+  'hard_work_only': { safety: -15, permission: 10, ambition: 20, shadow: "Мазохизм", text: "Вы верите, что деньги 'законны' только если они получены через страдание." },
+  'capacity_expansion': { safety: 20, permission: 30, ambition: 35, shadow: "Гиперответственность", text: "Вы готовы к масштабу, но склонны тянуть всё на своих плечах." },
+  'family_loyalty': { safety: 15, permission: -40, ambition: -10, shadow: "Родовое переплетение", text: "Вы бессознательно храните верность тяжелой судьбе ваших предков." },
+  'guilt_after_pleasure': { safety: -20, permission: -30, ambition: 5, shadow: "Запрет на радость", text: "Вам кажется, что за каждую минуту счастья придется заплатить горем." },
+  'self_permission': { safety: 25, permission: 35, ambition: 25, shadow: "Эгоцентризм", text: "Вы разрешили себе быть главным бенефициаром своей жизни." }
 };
 
 export async function getPsychologicalFeedback(history: any[]): Promise<AnalysisResult> {
   let safety = 50, permission = 50, ambition = 50;
-  let summaryParts: string[] = [];
+  let descriptions: string[] = [];
+  let shadows: string[] = [];
   
   history.forEach(item => {
-    const impact = BELIEF_IMPACT[item.beliefKey];
+    const impact = SCENARIO_IMPACT[item.beliefKey];
     if (impact) {
-      safety = Math.max(5, Math.min(100, safety + impact.safety));
-      permission = Math.max(5, Math.min(100, permission + impact.permission));
-      ambition = Math.max(5, Math.min(100, ambition + impact.ambition));
-      summaryParts.push(impact.text);
+      safety = Math.max(0, Math.min(100, safety + impact.safety));
+      permission = Math.max(0, Math.min(100, permission + impact.permission));
+      ambition = Math.max(0, Math.min(100, ambition + impact.ambition));
+      descriptions.push(impact.text);
+      shadows.push(impact.shadow);
     }
   });
 
   const capacity = Math.round((safety + permission + ambition) / 3);
   
-  let keyBelief = "Деньги приходят на запрос";
-  let actionStep = "Сделайте список из 100 желаний, не думая о цене.";
-  let profileType = "Исследователь";
-  
-  if (capacity < 35) {
-    profileType = "Хранитель дефицита";
-    keyBelief = "Безопасность — это отсутствие изменений";
-    actionStep = "Найдите 3 безопасных способа потратить 10% дохода на себя.";
-  } else if (permission < 45) {
-    profileType = "Аскет";
-    keyBelief = "Мне нельзя больше, чем другим";
-    actionStep = "Купите вещь, которая кажется 'слишком хорошей' для вас.";
-  } else if (ambition > 75) {
-    profileType = "Архитектор систем";
-    keyBelief = "Масштаб — это вопрос структуры, а не усилий";
-    actionStep = "Опишите ваш бизнес-процесс так, чтобы его понял ребенок.";
+  // Определение Архетипа
+  let archetype = "Наблюдатель";
+  let profileType = "Сбалансированный";
+  let actionStep = "Практика благодарности: записывайте 3 способа, как деньги помогли вам сегодня.";
+
+  if (safety < 40) {
+    archetype = "Беженец";
+    profileType = "Тревожный дефицит";
+    actionStep = "Создайте 'фонд безопасности' — небольшую сумму наличными, которую нельзя тратить, чтобы приучить тело к ощущению наличия ресурса.";
+  } else if (permission < 40) {
+    archetype = "Слуга";
+    profileType = "Запрет на владение";
+    actionStep = "Купите себе подарок на сумму, которая кажется вам 'неприлично большой' за один раз. Не оправдывайтесь перед собой.";
+  } else if (ambition > 70) {
+    archetype = "Завоеватель";
+    profileType = "Активная экспансия";
+    actionStep = "Делегируйте одну задачу, которую вы обычно делаете сами, даже если 'никто не сделает лучше'.";
   }
 
+  const analysisText = descriptions.slice(-2).join(" ") + " Ваша текущая задача — интегрировать право на удовольствие без необходимости заслуживать его через боль.";
+
   return {
-    analysisText: summaryParts.slice(-2).join(" ") + " Ваш текущий фокус — балансировка между сохранением накопленного и риском расширения.",
+    analysisText,
     scoreSafety: safety,
     scorePermission: permission,
     scoreAmbition: ambition,
-    capacity: capacity,
-    keyBelief: keyBelief,
-    actionStep: actionStep,
-    imageTheme: "zen-abstract",
-    profileType
+    capacity,
+    keyBelief: shadows[shadows.length - 1] || "Точка роста",
+    actionStep,
+    profileType,
+    archetype,
+    shadowSide: shadows.join(", ")
   };
 }
 
@@ -81,16 +88,13 @@ export async function textToSpeech(text: string): Promise<string | null> {
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'ru-RU';
-    utter.rate = 0.95;
+    utter.rate = 0.9;
     utter.pitch = 1.0;
     window.speechSynthesis.speak(utter);
     utter.onend = () => resolve("played");
   });
 }
 
-export function decodeBase64(s: string) { return new Uint8Array(); }
-export async function playAudioBuffer(d: any) { return; }
-
 export async function generateMindsetAnchor(prompt: string): Promise<string> {
-  return `https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800`; // Эстетичная абстракция
+  return `https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800`;
 }

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { INITIAL_SCENES } from './constants.ts';
 import { translations } from './translations.ts';
-import { getPsychologicalFeedback, textToSpeech } from './services/psychologyService.ts';
+import { getPsychologicalFeedback } from './services/psychologyService.ts';
 
 declare global {
   interface Window {
@@ -40,7 +40,6 @@ const App: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     if (window.Telegram?.WebApp) {
@@ -215,16 +214,6 @@ const App: React.FC = () => {
                 </div>
                 
                 <div className="pt-8 border-t border-slate-100 space-y-8">
-                  <div className="p-6 bg-indigo-600 text-white rounded-[2.5rem] shadow-xl shadow-indigo-100 flex items-center gap-6 group active:scale-95 transition-all" onClick={() => { setIsPlaying(true); textToSpeech(analysisData.analysisText).then(() => setIsPlaying(false)); }}>
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                      <span className="text-2xl">{isPlaying ? '⏸' : '▶'}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Послушать анализ</span>
-                      <span className="font-bold text-sm">Голос вашего наставника</span>
-                    </div>
-                  </div>
-
                   <div className="space-y-4">
                     <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest px-2">Ключевой сценарий:</p>
                     <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">

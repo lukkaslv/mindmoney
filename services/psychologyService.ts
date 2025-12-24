@@ -82,19 +82,6 @@ export async function getPsychologicalFeedback(history: any[]): Promise<Analysis
   };
 }
 
-export async function textToSpeech(text: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    if (!window.speechSynthesis) return resolve(null);
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'ru-RU';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    window.speechSynthesis.speak(utter);
-    utter.onend = () => resolve("played");
-  });
-}
-
 export async function generateMindsetAnchor(prompt: string): Promise<string> {
   return `https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=800`;
 }

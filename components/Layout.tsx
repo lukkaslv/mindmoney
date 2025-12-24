@@ -4,19 +4,26 @@ import { translations } from '../translations.ts';
 
 interface LayoutProps {
   children: React.ReactNode;
-  lang?: 'ru' | 'ka';
+  lang: 'ru' | 'ka';
+  onLangChange: (lang: 'ru' | 'ka') => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, lang, onLangChange }) => {
   const t = translations[lang];
   const [showBuild, setShowBuild] = useState(false);
 
   const handleClearCache = () => {
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('warning');
-    if (confirm("Очистить текущую сессию?")) {
+    if (confirm(lang === 'ru' ? "Очистить текущую сессию?" : "გსურთ სესიის გასუფთავება?")) {
       localStorage.clear();
       window.location.reload();
     }
+  };
+
+  const toggleLang = () => {
+    const nextLang = lang === 'ru' ? 'ka' : 'ru';
+    onLangChange(nextLang);
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
   };
 
   return (
@@ -30,12 +37,20 @@ export const Layout: React.FC<LayoutProps> = ({ children, lang = 'ru' }) => {
             {t.subtitle}
           </span>
         </div>
-        <button 
-          onClick={handleClearCache}
-          className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/50 backdrop-blur-sm border border-white/50 shadow-sm active:scale-90 transition-all"
-        >
-          <span className="text-xs">🔄</span>
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={toggleLang}
+            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/50 backdrop-blur-sm border border-white/50 shadow-sm active:scale-90 transition-all font-black text-[10px] text-indigo-600"
+          >
+            {lang === 'ru' ? 'RU' : 'KA'}
+          </button>
+          <button 
+            onClick={handleClearCache}
+            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/50 backdrop-blur-sm border border-white/50 shadow-sm active:scale-90 transition-all"
+          >
+            <span className="text-xs">🔄</span>
+          </button>
+        </div>
       </header>
       
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">

@@ -1,152 +1,76 @@
 
-// Автономный глубокий психологический движок v4.0 (Deterministic Analysis)
+// Автономный глубокий психологический движок v6.0 (Localization-Ready)
 
 export interface AnalysisResult {
-  archetype: string;
-  coreConflict: string;
-  bodyAnalysis: string;
-  analysisText: string;
+  archetypeKey: string;
+  conflictKey: string;
+  bodyAnalysisKey: string;
+  analysisTextKeys: string[];
   scoreSafety: number;
   scorePermission: number;
   scoreAmbition: number;
-  keyBelief: string;
-  actionStep: string;
-  shadowSide: string;
+  shadowKeys: string[];
+  defenseMechanisms: string[];
+  roadmapKeys: {
+    now: string;
+    month1: string;
+    month6: string;
+  };
 }
 
 const TRAITS: Record<string, any> = {
-  'fear_of_punishment': { 
-    safety: -20, permission: -5, ambition: 0, 
-    conflict: "Безопасность vs Проявление", 
-    body: "Зажим в горле и плечах как попытка 'сжаться' и стать незаметным для 'карающей' системы.",
-    shadow: "Подавленная агрессия и желание бунта против правил.",
-    text: "Ваш выбор продиктован древним страхом: успех ассоциируется с опасностью быть замеченным и наказанным."
-  },
-  'impulse_spend': { 
-    safety: -10, permission: +20, ambition: +10, 
-    conflict: "Удовольствие vs Стабильность", 
-    body: "Тремор в руках и учащенное сердцебиение — возбуждение, граничащее с тревогой потери контроля.",
-    shadow: "Страх перед будущим и неспособность выдерживать напряжение от обладания ресурсом.",
-    text: "Слив денег — это защитный механизм: вы избавляетесь от ресурса, чтобы избавиться от ответственности за него."
-  },
-  'money_is_danger': { 
-    safety: -30, permission: -10, ambition: -5, 
-    conflict: "Выживание vs Рост", 
-    body: "Холод в животе и сжатие диафрагмы. Тело готовится к нападению извне при малейшем достатке.",
-    shadow: "Паранойя и недоверие к миру, скрытое под маской 'скромности'.",
-    text: "Для вас деньги — это мишень. Вы бессознательно выбираете невидимость, чтобы сохранить жизнь."
-  },
-  'poverty_is_virtue': { 
-    safety: +10, permission: -25, ambition: -15, 
-    conflict: "Мораль vs Потребности", 
-    body: "Тяжесть в груди — 'камень' морального превосходства, мешающий дышать полной грудью.",
-    shadow: "Гордыня и презрение к тем, кто позволил себе больше, чем вы.",
-    text: "Вы используете нехватку денег как доказательство своей духовной чистоты, боясь стать 'испорченным'."
-  },
-  'fear_of_conflict': { 
-    safety: +5, permission: -20, ambition: -10, 
-    conflict: "Принадлежность vs Автономия", 
-    body: "Комок в горле — невысказанное право на свое мнение и свои границы.",
-    shadow: "Глубокая обида на близких за то, что ради них приходится предавать свои интересы.",
-    text: "Вы платите своим благополучием за право оставаться 'хорошим' и принятым в своей стае."
-  },
-  'money_is_tool': { 
-    safety: +15, permission: +15, ambition: +15, 
-    conflict: "Инструментальный подход", 
-    body: "Тепло и расслабление в конечностях. Способность действовать точно и без лишнего пафоса.",
-    shadow: "Излишняя рационализация чувств, страх перед глубокой эмоциональной близостью.",
-    text: "Вы видите в деньгах рычаг. Это взрослая позиция, позволяющая управлять реальностью без драмы."
-  },
-  'imposter_syndrome': { 
-    safety: -5, permission: -25, ambition: +10, 
-    conflict: "Компетентность vs Признание", 
-    body: "Напряжение в челюсти — попытка удержать маску 'знающего', боясь разоблачения.",
-    shadow: "Зависть к тем, кто проявляется легко и без самобичевания.",
-    text: "Внутренний критик обесценивает каждый ваш шаг, заставляя бесконечно 'готовиться' вместо того, чтобы жить."
-  },
-  'hard_work_only': { 
-    safety: -10, permission: +5, ambition: +20, 
-    conflict: "Страдание vs Результат", 
-    body: "Хроническое напряжение в пояснице — вы несете на себе груз 'заслуженности' каждой копейки.",
-    shadow: "Мазохистическое удовольствие от преодоления трудностей.",
-    text: "Вы верите, что легкие деньги — грязные. Вы буквально 'покупаете' право на доход своим здоровьем."
-  },
-  'capacity_expansion': { 
-    safety: +10, permission: +25, ambition: +25, 
-    conflict: "Масштабирование", 
-    body: "Расширение в грудной клетке, глубокое дыхание. Готовность занимать больше места в мире.",
-    shadow: "Гиперответственность и страх потерять контроль над выстроенной структурой.",
-    text: "Вы расширяете свои границы. Это путь лидера, который готов делегировать и доверять."
-  },
-  'family_loyalty': { 
-    safety: +10, permission: -30, ambition: -10, 
-    conflict: "Род vs Я", 
-    body: "Тяжесть в ногах — корни, которые не дают уйти от сценария бедности предков.",
-    shadow: "Страх предательства семьи через свой успех.",
-    text: "Ваша верность роду проявляется через повторение их тяжелой судьбы. Быть богаче родителей для вас значит бросить их."
-  },
-  'guilt_after_pleasure': { 
-    safety: -15, permission: -20, ambition: +5, 
-    conflict: "Радость vs Расплата", 
-    body: "Холод в конечностях после покупки — ожидание немедленного 'удара судьбы' за проявленную дерзость.",
-    shadow: "Убежденность, что за всё хорошее в жизни нужно платить страданиями.",
-    text: "Удовольствие для вас связано с тревогой. Вы не умеете присваивать себе радость, не разрушая ее виной."
-  },
-  'self_permission': { 
-    safety: +20, permission: +30, ambition: +20, 
-    conflict: "Право на бытие", 
-    body: "Чувство центрированности. Опора на себя и свои желания как на главную ценность.",
-    shadow: "Склонность к эгоцентризму и потере связи с потребностями окружающих.",
-    text: "Вы разрешили себе быть. Это фундамент финансового здоровья — признание своей ценности по праву рождения."
-  }
+  'fear_of_punishment': { s: -25, p: -5, a: 0, conflict: 'safety_vs_show', defense: 'Проекция' },
+  'impulse_spend': { s: -15, p: 20, a: 10, conflict: 'pleasure_vs_stability', defense: 'Отыгрывание' },
+  'money_is_danger': { s: -35, p: -10, a: -5, conflict: 'survival_vs_growth', defense: 'Избегание' },
+  'poverty_is_virtue': { s: 15, p: -30, a: -20, conflict: 'loyalty_vs_success', defense: 'Морализация' },
+  'fear_of_conflict': { s: 10, p: -25, a: -15, conflict: 'loyalty_vs_success', defense: 'Конформизм' },
+  'money_is_tool': { s: 20, p: 20, a: 20, conflict: 'autonomy', defense: 'Рационализация' },
+  'imposter_syndrome': { s: -10, p: -30, a: 15, conflict: 'self_worth', defense: 'Обесценивание' },
+  'hard_work_only': { s: -15, p: 10, a: 25, conflict: 'survival_vs_growth', defense: 'Мазохизм' },
+  'capacity_expansion': { s: 15, p: 30, a: 30, conflict: 'autonomy', defense: 'Интеллектуализация' },
+  'family_loyalty': { s: 15, p: -35, a: -15, conflict: 'loyalty_vs_success', defense: 'Интроекция' },
+  'guilt_after_pleasure': { s: -20, p: -25, a: 10, conflict: 'pleasure_vs_stability', defense: 'Аннулирование' },
+  'self_permission': { s: 25, p: 35, a: 25, conflict: 'self_worth', defense: 'Принятие' }
 };
 
 export async function getPsychologicalFeedback(history: any[]): Promise<AnalysisResult> {
   let safety = 50, permission = 50, ambition = 50;
-  let summaryTexts: string[] = [];
-  let shadowSides: string[] = [];
-  let conflicts: string[] = [];
-  let bodyNotes: string[] = [];
+  let traits: string[] = [];
+  let defenses: string[] = [];
 
   history.forEach(item => {
-    const trait = TRAITS[item.beliefKey];
-    if (trait) {
-      safety = Math.max(0, Math.min(100, safety + trait.safety));
-      permission = Math.max(0, Math.min(100, permission + trait.permission));
-      ambition = Math.max(0, Math.min(100, ambition + trait.ambition));
-      summaryTexts.push(trait.text);
-      shadowSides.push(trait.shadow);
-      conflicts.push(trait.conflict);
-      bodyNotes.push(trait.body);
+    const t = TRAITS[item.beliefKey];
+    if (t) {
+      safety = Math.max(0, Math.min(100, safety + t.s));
+      permission = Math.max(0, Math.min(100, permission + t.p));
+      ambition = Math.max(0, Math.min(100, ambition + t.a));
+      traits.push(item.beliefKey);
+      defenses.push(t.defense);
     }
   });
 
-  // Логика определения Архетипа на основе баланса шкал
-  let archetype = "Наблюдатель";
-  if (safety < 40 && permission < 40) archetype = "Пленник Дефицита";
-  else if (safety < 40 && ambition > 60) archetype = "Тревожный Достигатор";
-  else if (permission < 40 && safety > 60) archetype = "Смиренный Хранитель";
-  else if (permission > 70 && ambition > 70) archetype = "Денежный Экспандер";
-  else if (ambition < 40) archetype = "Мирный Созерцатель";
-
-  const keyBelief = history[history.length - 1] ? 
-    `"${TRAITS[history[history.length - 1].beliefKey]?.shadow || 'Точка роста'}"` : 
-    "Я имею право на большее";
-
-  const actionStep = safety < 50 ? 
-    "Создайте список из 10 вещей, которые дают вам чувство опоры, не связанные с деньгами." :
-    "Позвольте себе одну импульсивную покупку-подарок, которая не несет 'пользы', а только радость.";
+  // Логика архетипа
+  let archetype = "observer";
+  if (safety < 45 && permission < 45) archetype = "prisoner";
+  else if (safety < 45 && ambition > 60) archetype = "achiever";
+  else if (permission < 45 && safety > 65) archetype = "keeper";
+  else if (permission > 65 && ambition > 65) archetype = "expander";
+  else if (ambition > 70 && safety < 40) archetype = "architect";
 
   return {
-    archetype,
-    coreConflict: conflicts[conflicts.length - 1] || "Поиск баланса",
-    bodyAnalysis: bodyNotes.slice(-2).join(" "),
-    analysisText: summaryTexts.slice(-2).join(" ") + " Интеграция этих осознаний позволит вам перестать тратить энергию на внутреннюю борьбу.",
+    archetypeKey: archetype,
+    conflictKey: TRAITS[traits[traits.length - 1] || 'money_is_tool'].conflict,
+    bodyAnalysisKey: (history[history.length-1]?.bodySensation || "none"),
+    analysisTextKeys: traits.slice(-2),
     scoreSafety: safety,
     scorePermission: permission,
     scoreAmbition: ambition,
-    keyBelief,
-    actionStep,
-    shadowSide: Array.from(new Set(shadowSides)).slice(-2).join(", ")
+    shadowKeys: traits.slice(0, 2),
+    defenseMechanisms: Array.from(new Set(defenses)).slice(0, 3),
+    roadmapKeys: {
+      now: safety < 45 ? "grounding" : "permission",
+      month1: permission < 45 ? "separation" : "delegation",
+      month6: ambition > 60 ? "investment" : "passive"
+    }
   };
 }

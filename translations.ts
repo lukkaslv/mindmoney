@@ -2,27 +2,36 @@
 export const translations = {
   ru: {
     title: "MoneyMindset 💎",
-    subtitle: "Терапия финансовой свободы",
+    subtitle: "Лаборатория Финансовой Свободы",
     enterPassword: "Код доступа к сессии",
     accessBtn: "Начать погружение",
-    wrongPassword: "Код не подходит. Уточните его у наставника.",
-    transformation: "Ваш путь",
-    profile: "Карта денежного мышления",
+    wrongPassword: "Код не подходит. Уточните его у психолога.",
     loadingSteps: [
-      "Прислушиваемся к вашим реакциям...",
-      "Анализируем нейронные связи...",
-      "Синхронизируем тело и разум...",
-      "Визуализируем ваш новый образ...",
-      "Готовим глубокий отчет..."
+      "Синхронизация с подсознанием...",
+      "Анализ телесных паттернов...",
+      "Выявление системных лояльностей...",
+      "Расчет финансовой емкости...",
+      "Формирование стратегии роста..."
     ],
-    insight: "Главный инсайт:",
-    practice: "Ваш шаг к изменениям:",
-    bookSession: "Обсудить с психологом",
-    restart: "Пройти еще раз",
-    deeper: "Заглянем внутрь?",
-    whyChoice: "О чем вы подумали в этот момент?",
-    whereInBody: "Где в теле возникло ощущение?",
-    saveNext: "Продолжить путь",
+    reflectionTitle: "Слой Рефлексии",
+    reflectionSubtitle: "Внутренняя диагностика",
+    bodyQuestion: "Где откликнулось в теле?",
+    thoughtQuestion: "Ваша первая честная мысль?",
+    confirmBtn: "Зафиксировать",
+    resultArchetype: "Ваш финансовый профиль",
+    resultConflict: "Центральный конфликт",
+    resultAnalysis: "Анализ сценария",
+    resultBody: "Телесный резонанс",
+    resultRoadmap: "Дорожная карта изменений",
+    resultShadow: "Теневая зона",
+    resultDefense: "Защитные механизмы",
+    bookBtn: "Разбор со специалистом",
+    restartBtn: "Начать заново",
+    roadmapLabels: {
+      now: "Сейчас",
+      month1: "Месяц 1",
+      month6: "Вектор года"
+    },
     bodySensations: {
       throat: "Сжатие в горле",
       chest: "Тяжесть в груди",
@@ -31,37 +40,56 @@ export const translations = {
       warmth: "Прилив тепла",
       none: "Спокойствие"
     },
-    adminTitle: "Панель Психолога",
-    adminPassLabel: "Пароль для клиентов",
-    adminContactLabel: "Ссылка на запись (URL)",
-    adminSave: "Сохранить настройки",
-    adminStats: "Статистика системы",
-    adminClientLink: "Текст для клиента",
-    adminCopyLink: "Скопировать приглашение"
+    // Ключи для психологии (перевод результатов сервиса)
+    archetypes: {
+      keeper: "Смиренный Хранитель",
+      achiever: "Тревожный Достигатор",
+      prisoner: "Пленник Дефицита",
+      expander: "Денежный Экспандер",
+      observer: "Мирный Наблюдатель",
+      architect: "Теневой Архитектор"
+    },
+    conflicts: {
+      safety_vs_show: "Безопасность vs Проявление",
+      pleasure_vs_stability: "Удовольствие vs Стабильность",
+      survival_vs_growth: "Выживание vs Рост",
+      loyalty_vs_success: "Лояльность vs Успех",
+      self_worth: "Самоценность",
+      autonomy: "Автономия"
+    }
   },
   ka: {
     title: "MoneyMindset 💎",
-    subtitle: "ფინანსური თავისუფლების თერაპია",
+    subtitle: "ფინანსური თავისუფლების ლაბორატორია",
     enterPassword: "სესიის კოდი",
-    accessBtn: "დაწყება",
-    wrongPassword: "კოდი არასწორია.",
-    transformation: "თქვენი გზა",
-    profile: "აზროვნების რუკა",
+    accessBtn: "ჩაძირვის დაწყება",
+    wrongPassword: "კოდი არასწორია. გადაამოწმეთ ფსიქოლოგთან.",
     loadingSteps: [
-      "თქვენს რეაქციებს ვუსმენთ...",
-      "ნეირონულ კავშირებს ვაანალიზებთ...",
-      "სხეულს და გონებას ვაკავშირებთ...",
-      "ახალ სახეს ვქმნით...",
-      "ანგარიშს ვამზადებთ..."
+      "ქვეცნობიერთან სინქრონიზაცია...",
+      "სხეულის პატერნების ანალიზი...",
+      "სისტემური ლოიალობის გამოვლენა...",
+      "ფინანსური ტევადობის გათვლა...",
+      "ზრდის სტრატეგიის ფორმირება..."
     ],
-    insight: "მთავარი ინსაიტი:",
-    practice: "თქვენი ნაბიჯი:",
-    bookSession: "ფსიქოლოგთან ჩაწერა",
-    restart: "თავიდან დაწყება",
-    deeper: "შიგნით ჩავიხედოთ?",
-    whyChoice: "რაზე იფიქრეთ ამ დროს?",
-    whereInBody: "სხეულის რომელ ნაწილში იგრძენით?",
-    saveNext: "გაგრძელება",
+    reflectionTitle: "რეფლექსიის შრე",
+    reflectionSubtitle: "შინაგანი დიაგნოსტიკა",
+    bodyQuestion: "სად იგრძენით სხეულში?",
+    thoughtQuestion: "თქვენი პირველი გულწრფელი აზრი?",
+    confirmBtn: "დაფიქსირება",
+    resultArchetype: "თქვენი ფინანსური პროფილი",
+    resultConflict: "ცენტრალური კონფლიქტი",
+    resultAnalysis: "სცენარის ანალიზი",
+    resultBody: "სხეულის რეზონანსი",
+    resultRoadmap: "ცვლილებების საგზაო რუკა",
+    resultShadow: "ჩრდილოვანი ზონა",
+    resultDefense: "დაცვითი მექანიზმები",
+    bookBtn: "სპეციალისტთან გარჩევა",
+    restartBtn: "თავიდან დაწყება",
+    roadmapLabels: {
+      now: "ახლა",
+      month1: "თვე 1",
+      month6: "წლის ვექტორი"
+    },
     bodySensations: {
       throat: "ყელის სპაზმი",
       chest: "სიმძიმე მკერდში",
@@ -70,12 +98,21 @@ export const translations = {
       warmth: "სითბოს მოზღვავება",
       none: "სიმშვიდე"
     },
-    adminTitle: "ფსიქოლოგის პანელი",
-    adminPassLabel: "კოდი კლიენტებისთვის",
-    adminContactLabel: "ჩაწერის ბმული",
-    adminSave: "შენახვა",
-    adminStats: "სტატისტიკა",
-    adminClientLink: "ტექსტი კლიენტისთვის",
-    adminCopyLink: "ბმულის კოპირება"
+    archetypes: {
+      keeper: "მორჩილი მცველი",
+      achiever: "შფოთვიანი მიმღწევი",
+      prisoner: "დეფიციტის ტყვე",
+      expander: "ფულადი ექსპანდერი",
+      observer: "მშვიდი დამკვირვებელი",
+      architect: "ჩრდილოვანი არქიტექტორი"
+    },
+    conflicts: {
+      safety_vs_show: "უსაფრთხოება vs გამოვლენა",
+      pleasure_vs_stability: "სიამოვნება vs სტაბილურობა",
+      survival_vs_growth: "გადარჩენა vs ზრდა",
+      loyalty_vs_success: "ლოიალობა vs წარმატება",
+      self_worth: "თვითღირებულება",
+      autonomy: "ავტონომია"
+    }
   }
 };

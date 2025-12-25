@@ -23,10 +23,10 @@ export type BeliefKey =
   | 'ambivalence_loop' | 'hero_martyr' | 'autopilot_mode' | 'golden_cage';     
 
 export type TaskKey = 
-  | 'sanitation_1' | 'sanitation_2' | 'sanitation_3'
-  | 'stabilization_1' | 'stabilization_2' | 'stabilization_3'
-  | 'expansion_1' | 'expansion_2' | 'expansion_3'
-  | 'bug_fix_family' | 'bug_fix_fear' | 'bug_fix_imposter' | 'bug_fix_boundary'
+  | 'sanitation_1' | 'sanitation_2' | 'sanitation_3' | 'sanitation_4' | 'sanitation_5' | 'sanitation_6' | 'sanitation_7'
+  | 'stabilization_1' | 'stabilization_2' | 'stabilization_3' | 'stabilization_4' | 'stabilization_5' | 'stabilization_6' | 'stabilization_7'
+  | 'expansion_1' | 'expansion_2' | 'expansion_3' | 'expansion_4' | 'expansion_5' | 'expansion_6' | 'expansion_7'
+  | 'pattern_fix_family' | 'pattern_fix_fear' | 'pattern_fix_imposter' | 'pattern_fix_boundary'
   | 'shadow_work_1' | 'shadow_work_2';
 
 export type ArchetypeKey = 
@@ -81,7 +81,7 @@ export interface AdaptiveState {
   contradictions: Contradiction[];
   isComplete: boolean;
   suggestedNextNodeId: string | null;
-  confidenceScore: number; // 0-100 based on latency stability
+  confidenceScore: number;
 }
 
 export type PhaseType = 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
@@ -134,7 +134,7 @@ export interface AnalysisResult {
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
-  bugs: BeliefKey[];
+  activePatterns: BeliefKey[];
   correlations: NeuralCorrelation[]; 
   conflicts: SystemConflict[];
   somaticProfile: {
@@ -161,6 +161,7 @@ export interface ScanHistory {
   };
 }
 
+// Added missing CompatibilityReport interface for interpersonal analysis results
 export interface CompatibilityReport {
   overallScore: number;
   domainSynergies: DomainType[];

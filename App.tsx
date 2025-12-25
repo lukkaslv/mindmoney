@@ -4,7 +4,7 @@ import { Layout } from './components/Layout.tsx';
 import { MODULE_REGISTRY, TOTAL_NODES, ONBOARDING_NODES_COUNT, DOMAIN_SETTINGS } from './constants.ts';
 import { translations } from './translations.ts';
 import { calculateGenesisCore } from './services/psychologyService.ts';
-import { DomainType, Translations, AnalysisResult, GameHistoryItem, BeliefKey, ScanHistory } from './types.ts';
+import { DomainType, Translations, AnalysisResult, GameHistoryItem, ScanHistory } from './types.ts';
 import { StorageService, STORAGE_KEYS } from './services/storageService.ts';
 import { simpleHash, resolvePath } from './utils/helpers.ts';
 import { useTestEngine } from './hooks/useTestEngine.ts';

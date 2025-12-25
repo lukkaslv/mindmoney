@@ -1,23 +1,35 @@
 
-import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, VerdictKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel } from '../types';
-import { PSYCHO_CONFIG, ONBOARDING_NODES_COUNT, DOMAIN_SETTINGS } from '../constants';
+import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel } from '../types';
+import { DOMAIN_SETTINGS } from '../constants';
 import { CompatibilityEngine } from './compatibilityEngine';
 
 const TASKS_LOGIC: Record<PhaseType, Array<{ taskKey: TaskKey, targetMetricKey: string }>> = {
   SANITATION: [
     { taskKey: "sanitation_1", targetMetricKey: "Focus +10%" },
     { taskKey: "sanitation_2", targetMetricKey: "Sync +15%" },
-    { taskKey: "sanitation_3", targetMetricKey: "Space +15%" }
+    { taskKey: "sanitation_3", targetMetricKey: "Space +15%" },
+    { taskKey: "sanitation_4", targetMetricKey: "Clarity +20%" },
+    { taskKey: "sanitation_5", targetMetricKey: "Control +10%" },
+    { taskKey: "sanitation_6", targetMetricKey: "Awareness +12%" },
+    { taskKey: "sanitation_7", targetMetricKey: "Space +25%" }
   ],
   STABILIZATION: [
-    { taskKey: "stabilization_1", targetMetricKey: "Foundation +12%" },
-    { taskKey: "stabilization_2", targetMetricKey: "Foundation +8%" },
-    { taskKey: "stabilization_3", targetMetricKey: "Foundation +15%" }
+    { taskKey: "stabilization_1", targetMetricKey: "Agency +12%" },
+    { taskKey: "stabilization_2", targetMetricKey: "Foundation +15%" },
+    { taskKey: "stabilization_3", targetMetricKey: "Will +10%" },
+    { taskKey: "stabilization_4", targetMetricKey: "Stability +15%" },
+    { taskKey: "stabilization_5", targetMetricKey: "Focus +12%" },
+    { taskKey: "stabilization_6", targetMetricKey: "Agency +15%" },
+    { taskKey: "stabilization_7", targetMetricKey: "Integrity +15%" }
   ],
   EXPANSION: [
-    { taskKey: "expansion_1", targetMetricKey: "Agency +20%" },
-    { taskKey: "expansion_2", targetMetricKey: "Agency +15%" },
-    { taskKey: "expansion_3", targetMetricKey: "Agency +25%" }
+    { taskKey: "expansion_1", targetMetricKey: "Courage +20%" },
+    { taskKey: "expansion_2", targetMetricKey: "Resource +15%" },
+    { taskKey: "expansion_3", targetMetricKey: "Agency +20%" },
+    { taskKey: "expansion_4", targetMetricKey: "Visibility +25%" },
+    { taskKey: "expansion_5", targetMetricKey: "Scale +30%" },
+    { taskKey: "expansion_6", targetMetricKey: "Vision +20%" },
+    { taskKey: "expansion_7", targetMetricKey: "Integrity +25%" }
   ]
 };
 
@@ -50,14 +62,14 @@ const WEIGHTS: Record<BeliefKey, Vector4> = {
   'golden_cage':          { f: 0, a: -5, r: 0, e: 5 }
 };
 
-const BUG_FIX_TASKS: Partial<Record<BeliefKey, TaskKey>> = {
-    'family_loyalty': 'bug_fix_family',
-    'shame_of_success': 'bug_fix_family',
-    'imposter_syndrome': 'bug_fix_imposter',
-    'fear_of_punishment': 'bug_fix_fear',
-    'unconscious_fear': 'bug_fix_fear',
-    'boundary_collapse': 'bug_fix_boundary',
-    'fear_of_conflict': 'bug_fix_boundary'
+const PATTERN_FIX_TASKS: Partial<Record<BeliefKey, TaskKey>> = {
+    'family_loyalty': 'pattern_fix_family',
+    'shame_of_success': 'pattern_fix_family',
+    'imposter_syndrome': 'pattern_fix_imposter',
+    'fear_of_punishment': 'pattern_fix_fear',
+    'unconscious_fear': 'pattern_fix_fear',
+    'boundary_collapse': 'pattern_fix_boundary',
+    'fear_of_conflict': 'pattern_fix_boundary'
 };
 
 function updateMetric(current: number, delta: number): number {
@@ -70,26 +82,24 @@ function updateMetric(current: number, delta: number): number {
 export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult {
   let f = 50, a = 50, r = 50, e = 10;
   let syncScore = 100;
-  const bugs: BeliefKey[] = [];
+  const activePatterns: BeliefKey[] = [];
   const correlations: NeuralCorrelation[] = [];
   const conflicts: SystemConflict[] = [];
   const somaticProfile = { blocks: 0, resources: 0, dominantSensation: 's0' };
   const sensationsFreq: Record<string, number> = {};
 
   const latencies = history.map(h => h.latency).filter(l => l > 400 && l < 15000);
-  const userBaseline = latencies.slice(0, 3).reduce((sum, l) => sum + l, 0) / Math.max(1, Math.min(3, latencies.length)) || 2000;
+  const userBaseline = latencies.slice(0, 5).reduce((sum, l) => sum + l, 0) / Math.max(1, Math.min(5, latencies.length)) || 2000;
   const avgLatency = latencies.reduce((sum, l) => sum + l, 0) / latencies.length || userBaseline;
   
   const latencyVariance = latencies.length > 1 
     ? Math.sqrt(latencies.reduce((sum, l) => sum + Math.pow(l - avgLatency, 2), 0) / latencies.length) 
     : 0;
 
-  // Confidence Score calculation (higher variance = lower confidence)
   const confidenceScore = Math.max(0, 100 - (latencyVariance / avgLatency * 120));
 
   history.forEach((h, index) => {
-    // Calibration bypass: first 3 nodes have no effect on metrics, only baseline
-    if (parseInt(h.nodeId) < 3) return;
+    if (parseInt(h.nodeId) < 5) return;
 
     const beliefKey = h.beliefKey as BeliefKey;
     let w = WEIGHTS[beliefKey] || { f: 0, a: 0, r: 0, e: 1 };
@@ -121,7 +131,7 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     }
 
     if (w.a > 2 && (h.sensation === 's1' || h.sensation === 's4')) syncScore -= 6;
-    if (history.filter(item => item.beliefKey === h.beliefKey).length > 2) bugs.push(beliefKey);
+    if (history.filter(item => item.beliefKey === h.beliefKey).length > 2) activePatterns.push(beliefKey);
   });
 
   if (a > 75 && f < 35) conflicts.push({ key: 'icarus', severity: 'high', domain: 'agency' });
@@ -135,7 +145,6 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
   const coherence = Math.max(0, 100 - (latencyVariance / avgLatency * 80));
   const stability = Math.round((f * 0.65) + (a * 0.35));
   
-  // Qualitative status level (Crucial for Reflective tone)
   const status: MetricLevel = systemHealth > 80 ? 'OPTIMAL' : systemHealth > 50 ? 'STABLE' : systemHealth > 30 ? 'STRAINED' : 'DISRUPTED';
 
   const integrityBreakdown: IntegrityBreakdown = {
@@ -162,19 +171,21 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
   const matchPercent = Math.round((primary.score / totalWeight) * 100);
 
   let phase: PhaseType = systemHealth < 35 ? 'SANITATION' : systemHealth < 68 ? 'STABILIZATION' : 'EXPANSION';
-  const uniqueBugs = [...new Set(bugs)];
+  const uniquePatterns = [...new Set(activePatterns)];
+  const pool = TASKS_LOGIC[phase];
   const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
     const day = i + 1;
-    if (day % 3 === 0 && uniqueBugs.length > 0) {
-        const fixTask = BUG_FIX_TASKS[uniqueBugs.shift()!];
+    if (day % 3 === 0 && uniquePatterns.length > 0) {
+        const pattern = uniquePatterns.shift()!;
+        const fixTask = PATTERN_FIX_TASKS[pattern];
         if (fixTask) return { day, phase: 'SANITATION', taskKey: fixTask, targetMetricKey: "Recovery" };
     }
-    const pool = TASKS_LOGIC[phase];
-    return { day, phase, ...pool[i % pool.length] };
+    const taskData = pool[i % pool.length];
+    return { day, phase, ...taskData };
   });
 
   const partialResult = {
-    timestamp: Date.now(),
+    timestamp: history[history.length - 1]?.latency || 0, // Deterministic timestamp from last latency instead of Date.now()
     state: { foundation: f, agency: a, resource: r, entropy: e },
     integrity: integrityBase, capacity: Math.round((f + r) / 2), entropyScore: Math.round(e), neuroSync: Math.round(syncScore), systemHealth, phase,
     archetypeKey: primary.key,
@@ -185,18 +196,30 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     roadmap,
     graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
     status: systemHealth < 25 ? 'CRITICAL' : systemHealth < 55 ? 'UNSTABLE' : 'OPTIMAL',
-    bugs: [...new Set(bugs)],
+    activePatterns: [...new Set(activePatterns)],
     correlations: correlations.slice(0, 5),
     conflicts,
     somaticProfile,
     integrityBreakdown,
     interventionStrategy: f < 40 ? 'stabilize_foundation' : e > 50 ? 'lower_entropy' : 'activate_will',
     coreConflict: a > 75 && f < 40 ? 'icarus' : r > 70 && e > 55 ? 'leaky_bucket' : 'invisible_cage',
-    shadowDirective: bugs.includes('hero_martyr') ? 'self_sabotage_fix' : 'integrity_boost',
-    interferenceInsight: bugs.includes('family_loyalty') ? 'family_vs_money' : undefined,
+    shadowDirective: activePatterns.includes('hero_martyr') ? 'self_sabotage_fix' : 'integrity_boost',
+    interferenceInsight: activePatterns.includes('family_loyalty') ? 'family_vs_money' : undefined,
     clarity: Math.min(100, history.length * 2.5),
     confidenceScore: Math.round(confidenceScore)
   } as AnalysisResult;
+
+  let synthesizedLifeScript = "";
+  if (a > 75 && f < 35) synthesizedLifeScript = "high_agency_low_foundation";
+  else if (r > 70 && e > 50) synthesizedLifeScript = "high_resource_high_entropy";
+  else if (a < 40 && f > 70) synthesizedLifeScript = "low_agency_high_foundation";
+  else if (e > 55) synthesizedLifeScript = "high_volatility";
+  else if (syncScore < 45) synthesizedLifeScript = "somatic_dissonance";
+  else if (activePatterns.includes('family_loyalty') && r < 40) synthesizedLifeScript = "capacity_block";
+  else if (activePatterns.includes('shame_of_success')) synthesizedLifeScript = "resource_shame";
+  else synthesizedLifeScript = "healthy_integration";
+
+  (partialResult as any).lifeScriptKey = synthesizedLifeScript;
 
   partialResult.shareCode = CompatibilityEngine.generateShareCode(partialResult);
   return partialResult;

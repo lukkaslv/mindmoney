@@ -1,7 +1,6 @@
 
 import React, { memo, useEffect, useRef } from 'react';
 import { translations } from '../translations.ts';
-import { StorageService } from '../services/storageService.ts';
 
 declare global {
   interface Window {
@@ -17,9 +16,19 @@ interface LayoutProps {
   onLangChange: (lang: 'ru' | 'ka') => void;
   soundEnabled: boolean;
   onSoundToggle: () => void;
+  onLogout: () => void;
+  onReset: () => void;
 }
 
-export const Layout = memo<LayoutProps>(({ children, lang, onLangChange, soundEnabled, onSoundToggle }) => {
+export const Layout = memo<LayoutProps>(({ 
+  children, 
+  lang, 
+  onLangChange, 
+  soundEnabled, 
+  onSoundToggle,
+  onLogout,
+  onReset
+}) => {
   const t = translations[lang];
   const audioCtxRef = useRef<AudioContext | null>(null);
   const noiseNodeRef = useRef<AudioNode | null>(null);
@@ -35,7 +44,6 @@ export const Layout = memo<LayoutProps>(({ children, lang, onLangChange, soundEn
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
       
-      // Pink Noise Generation for calming laboratory ambient
       let b0, b1, b2, b3, b4, b5, b6;
       b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
       for (let i = 0; i < bufferSize; i++) {
@@ -47,7 +55,7 @@ export const Layout = memo<LayoutProps>(({ children, lang, onLangChange, soundEn
         b4 = 0.55000 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.0168980;
         output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-        output[i] *= 0.11; // volume
+        output[i] *= 0.11;
         b6 = white * 0.115926;
       }
 
@@ -60,7 +68,7 @@ export const Layout = memo<LayoutProps>(({ children, lang, onLangChange, soundEn
       filter.frequency.value = 400;
 
       const gain = ctx.createGain();
-      gain.gain.value = 0.05;
+      gain.gain.value = 0.03;
 
       source.connect(filter);
       filter.connect(gain);
@@ -82,67 +90,56 @@ export const Layout = memo<LayoutProps>(({ children, lang, onLangChange, soundEn
     };
   }, [soundEnabled]);
 
-  const handleClearCache = () => {
-    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('warning');
-    if (confirm(lang === 'ru' ? "Сбросить текущую сессию?" : "გსურთ სესიის გადატვირთვა?")) {
-      StorageService.clear();
-      window.location.reload();
-    }
-  };
-
   const toggleLang = () => {
     const nextLang = lang === 'ru' ? 'ka' : 'ru';
     onLangChange(nextLang);
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
   };
 
-  const logout = () => {
-    localStorage.removeItem('session_auth');
-    window.location.reload();
-  };
-
   return (
-    <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative h-full">
-      <header className="px-8 py-8 flex justify-between items-center z-30 relative shrink-0 border-b border-slate-50 bg-white/80 backdrop-blur-md">
+    <div className="flex-1 flex flex-col max-w-md mx-auto w-full relative h-full bg-white">
+      <header className="px-6 py-5 flex justify-between items-center z-50 relative shrink-0 border-b border-slate-100/50 glass-card">
         <div className="flex flex-col">
-          <h1 className="font-[900] text-2xl tracking-tight leading-none text-slate-900 flex items-center gap-2">
-            Genesis Lab <span className="text-indigo-600 text-xl">⚡</span>
+          <h1 className="font-black text-xl tracking-tight leading-none text-slate-900">
+            Genesis <span className="text-indigo-600">OS</span>
           </h1>
-          <span className="text-[10px] font-black text-indigo-400/80 uppercase tracking-[0.4em] mt-2">
-            {t.subtitle}
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            {t.subtitle.split('//')[0]}
           </span>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={onSoundToggle}
-            className={`w-10 h-10 flex items-center justify-center rounded-2xl border shadow-sm active:scale-90 transition-all text-sm ${soundEnabled ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-400'}`}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all ${soundEnabled ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
           >
             {soundEnabled ? '🔊' : '🔇'}
           </button>
           <button 
             onClick={toggleLang}
-            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white border border-slate-100 shadow-sm active:scale-90 transition-all font-black text-[10px] text-slate-800"
+            className="px-3 h-9 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-100 font-black text-[10px] text-slate-800"
           >
             {lang === 'ru' ? 'RU' : 'KA'}
-          </button>
-          <button 
-            onClick={handleClearCache}
-            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-white border border-slate-100 shadow-sm active:scale-90 transition-all text-sm"
-          >
-            🔄
           </button>
         </div>
       </header>
       
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth bg-white">
-        <div className="px-6 py-8 pb-32">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
+        <div className="px-5 py-6 pb-24">
           {children}
         </div>
       </main>
       
-      <footer className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-8 py-6 bg-white/90 backdrop-blur-md border-t border-slate-50 z-40 flex justify-between items-center">
-        <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.5em]">Genesis OS v6.3</span>
-        <button onClick={logout} className="text-[9px] font-black text-red-300 uppercase tracking-widest hover:text-red-500 transition-colors">Terminate_Session</button>
+      <footer className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-6 py-4 glass-card border-t border-slate-100 z-50 flex justify-between items-center rounded-t-3xl shadow-2xl">
+        <div className="flex flex-col">
+            <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">System Build</span>
+            <span className="text-[9px] font-mono font-bold text-slate-400">v6.4.2-STABLE</span>
+        </div>
+        <button 
+          onClick={onReset} 
+          className="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 hover:bg-slate-100 transition-colors"
+        >
+          Reset_Session
+        </button>
       </footer>
     </div>
   );

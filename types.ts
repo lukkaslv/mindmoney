@@ -43,7 +43,6 @@ export type VerdictKey =
 export interface Choice {
   id: string;
   textKey: string;
-  nextSceneId?: string;
   beliefKey: BeliefKey;
 }
 
@@ -64,6 +63,7 @@ export interface GameHistoryItem {
   beliefKey: BeliefKey;
   sensation: string;
   latency: number;
+  nodeId?: string; // Added to track correlations
 }
 
 export type PhaseType = 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
@@ -76,6 +76,13 @@ export interface ProtocolStep {
   completed?: boolean;
 }
 
+export interface NeuralCorrelation {
+  nodeId: string;
+  domain: DomainType;
+  type: 'resistance' | 'resonance';
+  descriptionKey: string;
+}
+
 export interface AnalysisResult {
   state: { foundation: number; agency: number; resource: number; entropy: number };
   integrity: number;
@@ -85,77 +92,55 @@ export interface AnalysisResult {
   neuroSync: number;
   phase: PhaseType;
   archetypeKey: ArchetypeKey;
+  secondaryArchetypeKey?: ArchetypeKey;
+  archetypeMatch: number; 
+  archetypeSpectrum: { key: ArchetypeKey; score: number }[]; // Full spectrum
   verdictKey: VerdictKey; 
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
   bugs: BeliefKey[];
-  deepAnalysis: {
-    category: string;
-    key: string;
-    intensity: number;
-  }[]; 
+  correlations: NeuralCorrelation[]; // Tracked "Why"
+  somaticProfile: {
+    blocks: number;
+    resources: number;
+    dominantSensation: string;
+  };
   interventionStrategy: string; 
   coreConflict: string; 
   shadowDirective: string;
   interferenceInsight?: string;
 }
 
-export interface VerdictDef {
-  label: string;
-  description: string;
-  impact: string;
-}
-
 export interface Translations {
   subtitle: string;
-  global: {
-    stats: string; uptime: string; level: string; progress: string; achievements: string;
-    export: string; import: string; copy: string; close: string;
-    save_success: string; import_prompt: string;
-    latency_warn: string;
-    next_node: string;
-    complete: string;
+  onboarding: {
+    title: string;
+    step1_t: string;
+    step1_d: string;
+    step2_t: string;
+    step2_d: string;
+    step3_t: string;
+    step3_d: string;
+    protocol_btn: string;
+    protocol_init: string;
+    protocol_ready: string;
+    start_btn: string;
   };
-  sync: {
-    title: string; desc: string; s0: string; s1: string; s2: string; s3: string; s4: string;
-    proceed: string; processing: string;
-  };
+  admin: Record<string, string>;
+  global: Record<string, string>;
+  sync: Record<string, string>;
   sensation_feedback: Record<string, string>; 
   domains: Record<DomainType, string>;
-  dashboard: {
-    title: string; 
-    desc: string; 
-    nodes_found: string; 
-    sync_status: string; 
-    locked: string; 
-    select_domain: string;
-    insight_noise: string;
-    insight_coherence: string;
-    insight_progress: string;
-    insight_somatic_dissonance: string;
-  };
-  results: {
-    integrity: string; entropy: string; capacity: string; roadmap: string;
-    logTitle: string; back: string; stability: string; neuro_sync: string;
-    conflict_warn: string; click_info: string;
-    share_button: string; share_url: string; blueprint_title: string;
-    shadow_zone: string; light_zone: string;
-    verdict_title: string; 
-    root_command: string;
-    deep_analysis_title: string;
-    intervention_title: string;
-    conflict_title: string;
-    shadow_directive_title: string;
-    interference_title: string;
-  };
+  dashboard: Record<string, string>;
+  results: Record<string, string>;
   phases: Record<Lowercase<PhaseType>, string>;
   tasks: Record<TaskKey, { title: string; method: string; metric: string }>; 
   scenes: Record<string, { title: string; desc: string; c1: string; c2: string; c3: string }>;
   beliefs: Record<BeliefKey, string>; 
   explanations: Record<string, string>;
   archetypes: Record<ArchetypeKey, { title: string; desc: string; superpower: string; shadow: string; quote: string; root_command: string }>;
-  verdicts: Record<VerdictKey, VerdictDef>; 
+  verdicts: Record<VerdictKey, { label: string; description: string; impact: string }>; 
   metric_definitions: Record<string, string>;
   synthesis_categories: Record<string, string>;
   synthesis: Record<string, string>; 
@@ -163,6 +148,7 @@ export interface Translations {
   conflicts: Record<string, string>;
   directives: Record<string, string>;
   interferences: Record<string, string>;
+  correlation_types: Record<string, string>;
   system_commentary: string[];
   auth_hint: string;
   legal_disclaimer: string;

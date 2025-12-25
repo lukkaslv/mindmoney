@@ -33,30 +33,16 @@ export const useTestEngine = ({
   const nodeStartTime = useRef<number>(0);
   const backgroundStart = useRef<number>(0);
   const totalPausedTime = useRef<number>(0);
+  const hardwareLatencyOffset = useRef<number>(0); // Calibration result
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const savedHistory = StorageService.load<GameHistoryItem[]>(STORAGE_KEYS.HISTORY, []);
     setState(prev => ({ ...prev, history: savedHistory }));
-  }, []);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        backgroundStart.current = performance.now();
-      } else {
-        if (backgroundStart.current > 0) {
-          const pausedDuration = performance.now() - backgroundStart.current;
-          totalPausedTime.current += pausedDuration;
-          backgroundStart.current = 0;
-        }
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
-    };
+    
+    // Attempt to load hardware calibration
+    const cal = localStorage.getItem('genesis_hardware_cal');
+    if (cal) hardwareLatencyOffset.current = parseFloat(cal);
   }, []);
 
   const startNode = useCallback((nodeId: number, domain: DomainType) => {
@@ -64,6 +50,16 @@ export const useTestEngine = ({
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('warning');
         return;
     }
+    
+    // Hidden Hardware Calibration Check on the first few nodes
+    if (state.history.length === 0) {
+        const start = performance.now();
+        requestAnimationFrame(() => {
+            hardwareLatencyOffset.current = performance.now() - start;
+            localStorage.setItem('genesis_hardware_cal', hardwareLatencyOffset.current.toString());
+        });
+    }
+
     setLastSelectedNode(nodeId);
     setActiveModule(domain);
     setState(prev => ({ ...prev, currentId: nodeId.toString(), lastChoice: null }));
@@ -74,16 +70,15 @@ export const useTestEngine = ({
     requestAnimationFrame(() => {
       nodeStartTime.current = performance.now();
     });
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
-  }, [isDemo, setActiveModule, setView]);
+  }, [isDemo, state.history.length, setActiveModule, setView]);
 
   const advanceNode = useCallback((nextNodes: number[]) => {
     const nextId = Math.max(...nextNodes) + 1;
     if (nextId >= TOTAL_NODES) { setView('results'); return; }
     if (isDemo && nextId >= 3) { setView('dashboard'); return; }
 
-    // FATIGUE DETECTION: If history is long and user slowing down, force dashboard return
-    if (state.history.length > 0 && state.history.length % 10 === 0) {
+    // Natural Fatigue Break
+    if (state.history.length > 0 && state.history.length % 12 === 0) {
         setView('dashboard');
         return;
     }
@@ -97,16 +92,16 @@ export const useTestEngine = ({
     }
     if (nextDomain) startNode(nextId, nextDomain);
     else setView('dashboard');
-  }, [isDemo, setView, startNode, state.history]);
+  }, [isDemo, setView, startNode, state.history.length]);
 
   const syncBodySensation = useCallback((sensation: string) => {
     if (!state.lastChoice) return;
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
 
     const newItem: GameHistoryItem = { 
       beliefKey: state.lastChoice.beliefKey, 
       sensation, 
-      latency: state.lastChoice.latency 
+      latency: state.lastChoice.latency,
+      nodeId: state.currentId
     };
     
     let nextNodes = [...completedNodeIds];
@@ -130,14 +125,18 @@ export const useTestEngine = ({
         if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         syncTimerRef.current = setTimeout(() => {
            advanceNode(nextNodes);
-        }, 1500);
+        }, 1200);
     }
-  }, [state.lastChoice, lastSelectedNode, completedNodeIds, advanceNode, setCompletedNodeIds, setView]);
+  }, [state.lastChoice, lastSelectedNode, completedNodeIds, advanceNode, setCompletedNodeIds, setView, state.currentId]);
 
   const handleChoice = useCallback((choice: Choice) => {
     window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.(); 
     const now = performance.now();
-    const cleanLatency = Math.max(0, now - nodeStartTime.current - totalPausedTime.current);
+    
+    // Precision Latency Logic
+    const rawLatency = now - nodeStartTime.current - totalPausedTime.current;
+    const cleanLatency = Math.max(0, rawLatency - hardwareLatencyOffset.current);
+    
     const choiceWithLatency: ChoiceWithLatency = { ...choice, latency: cleanLatency };
     
     if (activeModule) {
@@ -148,7 +147,12 @@ export const useTestEngine = ({
         setState(prev => ({ ...prev, lastChoice: choiceWithLatency }));
         if (shouldSample) setView('body_sync');
         else {
-             const newItem: GameHistoryItem = { beliefKey: choice.beliefKey, sensation: 's0', latency: cleanLatency };
+             const newItem: GameHistoryItem = { 
+                 beliefKey: choice.beliefKey, 
+                 sensation: 's0', 
+                 latency: cleanLatency,
+                 nodeId: state.currentId
+             };
              let nextNodes = [...completedNodeIds];
              if (lastSelectedNode !== null && !completedNodeIds.includes(lastSelectedNode)) nextNodes = [...completedNodeIds, lastSelectedNode];
              setState(prev => {

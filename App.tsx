@@ -15,21 +15,25 @@ import { BootView } from './components/views/BootView.tsx';
 import { DashboardView, NodeUI } from './components/views/DashboardView.tsx';
 import { TestView, BodySyncView, ReflectionView } from './components/views/TestModule.tsx';
 import { ResultsView } from './components/views/ResultsView.tsx';
+import { AdminPanel } from './components/views/AdminPanel.tsx';
 import { generateShareImage } from './utils/shareGenerator.ts';
 
-const AUTH_HASHES = [3333279, 104079552, 3002454];
+const ADMIN_HASH = 56345; 
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem(STORAGE_KEYS.LANG) as 'ru' | 'ka') || 'ru');
   const t: Translations = useMemo(() => translations[lang], [lang]);
   
-  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'reflection' | 'results'>('auth');
+  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'reflection' | 'results' | 'admin'>('auth');
   const [activeModule, setActiveModule] = useState<DomainType | null>(null);
   const [currentDomain, setCurrentDomain] = useState<DomainType | null>(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
   const [isDemo, setIsDemo] = useState(false);
   const [bootShown, setBootShown] = useState(() => sessionStorage.getItem('genesis_boot_seen') === 'true');
   const [soundEnabled, setSoundEnabled] = useState(false);
+  
+  // ADMIN OVERRIDES
+  const [forceGlitch, setForceGlitch] = useState(false);
 
   // Initialize Custom Hook for Test Logic
   const engine = useTestEngine({
@@ -56,7 +60,7 @@ const App: React.FC = () => {
      return Math.max(...completedNodeIds) + 1;
   }, [completedNodeIds]);
 
-  const isGlitchMode = result && result.entropyScore > 45;
+  const isGlitchMode = forceGlitch || (result && result.entropyScore > 45);
   const getSceneText = useCallback((textKey: string) => resolvePath(t, textKey), [t]);
 
   // INITIALIZATION
@@ -109,30 +113,50 @@ const App: React.FC = () => {
   }, [globalProgress, completedNodeIds, isDemo]);
 
   const handleLogin = useCallback((password: string, demo = false) => {
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('light');
+    
     if (demo) {
         localStorage.setItem(STORAGE_KEYS.SESSION, 'demo');
         setIsDemo(true);
-        if (!bootShown) setView('boot');
-        else setView('dashboard');
+        setView(bootShown ? 'dashboard' : 'boot');
         return;
     }
+
+    // Checking for Master Key or Admin
     const inputHash = simpleHash(password.toLowerCase().trim());
-    if (AUTH_HASHES.includes(inputHash)) {
+    if (inputHash === ADMIN_HASH) {
+        setView('admin');
+        return;
+    }
+
+    // Standard Entry (password is "genesis_lab_entry" from AuthView)
+    if (password === "genesis_lab_entry") {
       localStorage.setItem(STORAGE_KEYS.SESSION, 'true');
       setIsDemo(false);
-      if (!bootShown) setView('boot');
-      else setView('dashboard');
-    } else {
-       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('error');
+      setView(bootShown ? 'dashboard' : 'boot');
     }
   }, [bootShown]);
 
   const handleLogout = useCallback(() => {
+     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.('medium');
      localStorage.removeItem(STORAGE_KEYS.SESSION);
      sessionStorage.removeItem('genesis_boot_seen');
      setBootShown(false);
      setView('auth');
   }, []);
+
+  const handleReset = useCallback(() => {
+    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('warning');
+    const msg = lang === 'ru' ? "Сбросить текущую сессию?" : "გსურთ სესიის გადატვირთვა?";
+    if (confirm(msg)) {
+      StorageService.clear();
+      sessionStorage.removeItem('genesis_boot_seen');
+      setBootShown(false);
+      setCompletedNodeIds([]);
+      setView('auth');
+      window.location.reload();
+    }
+  }, [lang]);
 
   const handleContinue = useCallback(() => {
     const targetId = nextRecommendedId;
@@ -150,12 +174,10 @@ const App: React.FC = () => {
   const handleShare = useCallback(async () => {
     if (!result) return;
     
-    // Generate Image
     const blob = await generateShareImage(result, t);
     const shareUrl = t.results.share_url;
     const text = `Genesis OS Blueprint: ${t.archetypes[result.archetypeKey].title}`;
 
-    // Use Web Share API Level 2 if supported
     if (blob && navigator.share) {
        try {
          const file = new File([blob], 'genesis_blueprint.png', { type: 'image/png' });
@@ -170,86 +192,99 @@ const App: React.FC = () => {
        } catch(e) { console.error('Share failed', e); }
     }
 
-    // Fallback
     window.Telegram?.WebApp?.openLink?.(shareUrl);
   }, [result, t]);
-
-  // --- VIEW RENDERING ---
 
   const layoutProps = {
     lang,
     onLangChange: setLang,
     soundEnabled,
-    onSoundToggle: () => setSoundEnabled(!soundEnabled)
+    onSoundToggle: () => setSoundEnabled(!soundEnabled),
+    onLogout: handleLogout,
+    onReset: handleReset
   };
 
-  if (view === 'auth') return (
-    <Layout {...layoutProps}>
-      <AuthView onLogin={handleLogin} t={t} />
-    </Layout>
-  );
-
-  if (view === 'boot') return (
-    <Layout {...layoutProps}>
-      <BootView isDemo={isDemo} onComplete={() => { 
-          sessionStorage.setItem('genesis_boot_seen', 'true');
-          setBootShown(true); 
-          setView('dashboard'); 
-      }} />
-    </Layout>
-  );
-
-  if (view === 'dashboard') return (
-    <Layout {...layoutProps}>
-      <DashboardView 
-        t={t} isDemo={isDemo} globalProgress={globalProgress} result={result}
-        currentDomain={currentDomain} nodes={nodes} completedNodeIds={completedNodeIds}
-        onSetView={setView as any} onSetCurrentDomain={setCurrentDomain}
-        onStartNode={engine.startNode} onLogout={handleLogout}
-      />
-    </Layout>
-  );
-
-  if (view === 'test' && activeModule) {
-    const scene = MODULE_REGISTRY[activeModule]?.[engine.state.currentId];
-    if (!scene) return null;
-    return (
-      <Layout {...layoutProps}>
-        <TestView 
-          t={t} activeModule={activeModule} currentId={engine.state.currentId} 
-          scene={scene} onChoice={engine.handleChoice} onExit={() => setView('dashboard')} 
-          getSceneText={getSceneText} 
-        />
-      </Layout>
-    );
-  }
-
-  if (view === 'body_sync') return (
-    <Layout {...layoutProps}>
-      <BodySyncView t={t} onSync={engine.syncBodySensation} />
-    </Layout>
-  );
-
-  if (view === 'reflection') {
-     const lastItem = engine.state.history[engine.state.history.length - 1];
-     return (
+  return (
+    <div className={isGlitchMode ? 'glitch' : ''}>
+      {view === 'auth' && (
         <Layout {...layoutProps}>
-          <ReflectionView t={t} sensation={lastItem?.sensation} />
+          <AuthView onLogin={handleLogin} t={t} />
         </Layout>
-     );
-  }
+      )}
 
-  if (view === 'results' && result) return (
-    <Layout {...layoutProps}>
-      <ResultsView 
-        t={t} result={result} isGlitchMode={!!isGlitchMode} nextRecommendedId={nextRecommendedId}
-        onContinue={handleContinue} onShare={handleShare} onBack={() => setView('dashboard')}
-        getSceneText={getSceneText}
-      />
-    </Layout>
+      {view === 'boot' && (
+        <Layout {...layoutProps}>
+          <BootView isDemo={isDemo} onComplete={() => { 
+              sessionStorage.setItem('genesis_boot_seen', 'true');
+              setBootShown(true); 
+              setView('dashboard'); 
+          }} />
+        </Layout>
+      )}
+
+      {view === 'dashboard' && (
+        <Layout {...layoutProps}>
+          <DashboardView 
+            t={t} isDemo={isDemo} globalProgress={globalProgress} result={result}
+            currentDomain={currentDomain} nodes={nodes} completedNodeIds={completedNodeIds}
+            onSetView={setView as any} onSetCurrentDomain={setCurrentDomain}
+            onStartNode={engine.startNode} onLogout={handleLogout}
+          />
+        </Layout>
+      )}
+
+      {view === 'test' && activeModule && (
+        <Layout {...layoutProps}>
+          <TestView 
+            t={t} activeModule={activeModule} currentId={engine.state.currentId} 
+            scene={MODULE_REGISTRY[activeModule]?.[engine.state.currentId]} 
+            onChoice={engine.handleChoice} onExit={() => setView('dashboard')} 
+            getSceneText={getSceneText} 
+          />
+        </Layout>
+      )}
+
+      {view === 'body_sync' && (
+        <Layout {...layoutProps}>
+          <BodySyncView t={t} onSync={engine.syncBodySensation} />
+        </Layout>
+      )}
+
+      {view === 'reflection' && (
+        <Layout {...layoutProps}>
+          <ReflectionView t={t} sensation={engine.state.history[engine.state.history.length - 1]?.sensation} />
+        </Layout>
+      )}
+
+      {view === 'results' && result && (
+        <Layout {...layoutProps}>
+          <ResultsView 
+            t={t} result={result} isGlitchMode={!!isGlitchMode} nextRecommendedId={nextRecommendedId}
+            onContinue={handleContinue} onShare={handleShare} onBack={() => setView('dashboard')}
+            getSceneText={getSceneText}
+          />
+        </Layout>
+      )}
+
+      {view === 'admin' && (
+        <Layout {...layoutProps}>
+          <AdminPanel 
+            t={t} 
+            onExit={() => setView('auth')} 
+            result={result} 
+            history={engine.state.history}
+            onUnlockAll={() => {
+              const allIds = Array.from({ length: TOTAL_NODES }, (_, i) => i);
+              setCompletedNodeIds(allIds);
+              StorageService.save(STORAGE_KEYS.NODES, allIds);
+            }}
+            glitchEnabled={forceGlitch}
+            onToggleGlitch={() => setForceGlitch(!forceGlitch)}
+          />
+        </Layout>
+      )}
+    </div>
   );
-
-  return null;
 };
 
 export default App;

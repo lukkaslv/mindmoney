@@ -1,9 +1,14 @@
-
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 
 console.log("🚀 Module index.tsx loaded");
+
+// Ensure full viewport on Telegram
+if (window.Telegram?.WebApp) {
+  window.Telegram.WebApp.ready();
+  window.Telegram.WebApp.expand();
+}
 
 const rootElement = document.getElementById('root');
 if (rootElement) {

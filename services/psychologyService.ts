@@ -1,139 +1,156 @@
 
-export interface VectorState {
-  foundation: number;
-  agency: number;
-  resource: number;
-  entropy: number;
-}
+import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, VerdictKey } from '../types';
+import { PSYCHO_CONFIG, ONBOARDING_NODES_COUNT, DOMAIN_SETTINGS } from '../constants';
 
-export interface ProtocolStep {
-  day: number;
-  phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
-  task: { ru: string; ka: string };
-  method: { ru: string; ka: string };
-  targetMetric: { ru: string; ka: string };
-  completed?: boolean;
-}
-
-export interface AnalysisResult {
-  state: VectorState;
-  integrity: number;
-  capacity: number;
-  entropyScore: number;
-  systemHealth: number;
-  neuroSync: number;
-  phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
-  archetype: { ru: string; ka: string; icon: string };
-  roadmap: ProtocolStep[];
-  graphPoints: { x: number; y: number }[];
-  status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
-  bugs: string[];
-}
-
-const TASKS_DB: Record<string, any[]> = {
+const TASKS_LOGIC: Record<PhaseType, Array<{ taskKey: TaskKey, targetMetricKey: string }>> = {
   SANITATION: [
-    { task: { ru: "Ликвидация утечек", ka: "გაჟონვის ლიკვიდაცია" }, method: { ru: "Отключить уведомления во всех чатах на 24 часа.", ka: "გამორთეთ შეტყობინებები ყველა ჩატში 24 საათით." }, targetMetric: { ru: "Entropy -10%", ka: "ენტროპია -10%" } },
-    { task: { ru: "Телесный сброс", ka: "სხეულებრივი განტვირთვა" }, method: { ru: "15 минут интенсивной ходьбы в полной тишине.", ka: "15 წუთი ინტენსიური სიარული სრულ სიჩუმეში." }, targetMetric: { ru: "Sync +15%", ka: "სინქრონი +15%" } }
+    { taskKey: "sanitation_1", targetMetricKey: "Entropy -10%" },
+    { taskKey: "sanitation_2", targetMetricKey: "Sync +15%" },
+    { taskKey: "sanitation_3", targetMetricKey: "Entropy -15%" }
   ],
   STABILIZATION: [
-    { task: { ru: "Граница ресурса", ka: "რესურსის საზღვარი" }, method: { ru: "Определить сумму, которую вы НЕ потратите ни при каких условиях.", ka: "განსაზღვრეთ თანხა, რომელსაც არ დახარჯავთ არავითარ შემთხვევაში." }, targetMetric: { ru: "Foundation +12%", ka: "ფუნდამენტი +12%" } }
+    { taskKey: "stabilization_1", targetMetricKey: "Foundation +12%" },
+    { taskKey: "stabilization_2", targetMetricKey: "Foundation +8%" },
+    { taskKey: "stabilization_3", targetMetricKey: "Foundation +15%" }
   ],
   EXPANSION: [
-    { task: { ru: "Проявление воли", ka: "ნების გამოვლენა" }, method: { ru: "Заявить о своей цели публично или значимому человеку.", ka: "განაცხადეთ თქვენი მიზნის შესახებ საჯაროდ ან მნიშვნელოვან ადამიანთან." }, targetMetric: { ru: "Agency +20%", ka: "აგენტობა +20%" } }
+    { taskKey: "expansion_1", targetMetricKey: "Agency +20%" },
+    { taskKey: "expansion_2", targetMetricKey: "Agency +15%" },
+    { taskKey: "expansion_3", targetMetricKey: "Agency +25%" }
   ]
 };
 
-export function calculateGenesisCore(history: any[]): AnalysisResult {
-  let f = 50, a = 50, r = 50, e = 15;
+// Vector weights representation
+interface Vector4 { f: number; a: number; r: number; e: number }
+
+const WEIGHTS: Record<BeliefKey, Vector4> = {
+  'scarcity_mindset':     { f: -4, a: -2, r: -3, e: 4 },
+  'fear_of_punishment':   { f: -3, a: -3, r: -2, e: 4 },
+  'money_is_tool':        { f: 2, a: 4, r: 5, e: -2 },
+  'self_permission':      { f: 0, a: 3, r: 6, e: -3 },
+  'imposter_syndrome':    { f: -2, a: -6, r: -2, e: 5 },
+  'family_loyalty':       { f: -6, a: -2, r: -2, e: 3 },
+  'shame_of_success':     { f: -3, a: -4, r: 3, e: 6 },
+  'betrayal_trauma':      { f: -2, a: -3, r: 2, e: 8 },
+  'capacity_expansion':   { f: 3, a: 4, r: 4, e: -3 },
+  'hard_work_only':       { f: 3, a: 2, r: 1, e: 3 },
+  'boundary_collapse':    { f: -4, a: -5, r: -2, e: 6 }, 
+  'money_is_danger':      { f: -3, a: -2, r: -6, e: 7 }, 
+  'unconscious_fear':     { f: -3, a: -3, r: -2, e: 4 },
+  'short_term_bias':      { f: -2, a: 2, r: 3, e: 5 },
+  'impulse_spend':        { f: -2, a: 2, r: -4, e: 4 },
+  'fear_of_conflict':     { f: -2, a: -4, r: 0, e: 3 },
+  'poverty_is_virtue':    { f: -3, a: -3, r: -3, e: 3 },
+  'latency_resistance':   { f: 0, a: 0, r: 0, e: 2 },
+  'resource_toxicity':    { f: -2, a: 0, r: -2, e: 4 },
+  'body_mind_conflict':   { f: 0, a: -1, r: 0, e: 4 },
+  'ambivalence_loop':     { f: -2, a: -5, r: 0, e: 10 },
+  'hero_martyr':          { f: 0, a: 0, r: 0, e: 5 },
+  'autopilot_mode':       { f: 0, a: -5, r: 0, e: 5 },
+  'golden_cage':          { f: 0, a: -5, r: 0, e: 5 }
+};
+
+const BUG_FIX_TASKS: Partial<Record<BeliefKey, TaskKey>> = {
+    'family_loyalty': 'bug_fix_family',
+    'shame_of_success': 'bug_fix_family',
+    'imposter_syndrome': 'bug_fix_imposter',
+    'fear_of_punishment': 'bug_fix_fear',
+    'unconscious_fear': 'bug_fix_fear',
+    'boundary_collapse': 'bug_fix_boundary',
+    'fear_of_conflict': 'bug_fix_boundary'
+};
+
+function generateDeepAnalysis(f: number, a: number, r: number, e: number, sync: number) {
+  const synthesis: { category: string; key: string; intensity: number }[] = [];
+  if (a > 65 && f < 40) synthesis.push({ category: 'structural', key: 'high_agency_low_foundation', intensity: 3 });
+  else if (f > 65 && a < 40) synthesis.push({ category: 'structural', key: 'low_agency_high_foundation', intensity: 2 });
+  else if (a > 60 && f > 60 && e < 30) synthesis.push({ category: 'structural', key: 'healthy_integration', intensity: 1 });
+  if (r > 60 && e > 50) synthesis.push({ category: 'energy', key: 'high_resource_high_entropy', intensity: 3 });
+  if (sync < 50 && a > 50) synthesis.push({ category: 'cognitive', key: 'somatic_dissonance', intensity: 3 });
+  return synthesis;
+}
+
+function selectInterference(bugs: BeliefKey[]): string | undefined {
+    // Interference Matrix 2.0: Deep matching
+    if (bugs.includes('family_loyalty') && (bugs.includes('money_is_danger') || bugs.includes('scarcity_mindset'))) return 'family_vs_money';
+    if (bugs.includes('fear_of_punishment') && (bugs.includes('imposter_syndrome') || bugs.includes('shame_of_success'))) return 'social_vs_worth';
+    if (bugs.includes('boundary_collapse') && bugs.includes('unconscious_fear')) return 'will_vs_safety';
+    if (bugs.includes('resource_toxicity') && bugs.includes('shame_of_success')) return 'money_vs_shame';
+    if (bugs.includes('autopilot_mode') && bugs.includes('latency_resistance')) return 'agency_vs_logic';
+    return undefined;
+}
+
+export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult {
+  let f = 50, a = 50, r = 50, e = 10;
   let syncScore = 100;
-  const bugs: string[] = [];
-
-  const weights: Record<string, any> = {
-    'scarcity_mindset': { f: -15, a: -5, r: -10, e: 20 },
-    'fear_of_punishment': { f: -12, a: -8, r: -5, e: 18 },
-    'money_is_tool': { f: 5, a: 18, r: 22, e: -8 },
-    'self_permission': { f: 0, a: 15, r: 30, e: -12 },
-    'imposter_syndrome': { f: -5, a: -25, r: -10, e: 20 },
-    'family_loyalty': { f: -22, a: -5, r: -8, e: 15 },
-    'shame_of_success': { f: -10, a: -15, r: 12, e: 25 },
-    'betrayal_trauma': { f: -5, a: -12, r: 5, e: 35 },
-    'capacity_expansion': { f: 8, a: 15, r: 20, e: -10 },
-    
-    // MISSING WEIGHTS ADDED:
-    'hard_work_only': { f: 10, a: 10, r: 5, e: 15 }, // Строит фундамент, но растит энтропию (усталость)
-    'boundary_collapse': { f: -15, a: -15, r: -10, e: 25 }, // Разрушительно для всего
-    'money_is_danger': { f: -10, a: -5, r: -25, e: 30 }, // Сильный удар по ресурсам
-    'unconscious_fear': { f: -10, a: -10, r: -5, e: 15 },
-    'short_term_bias': { f: -5, a: 5, r: 10, e: 20 },
-    'impulse_spend': { f: -5, a: 5, r: -15, e: 15 },
-    'fear_of_conflict': { f: -5, a: -15, r: 0, e: 10 }
-  };
-
-  history.forEach(h => {
-    const w = weights[h.beliefKey] || { f: 0, a: 0, r: 0, e: 5 };
-    
-    // LATENCY RESISTANCE: Штраф за долгое принятие решения (> 5.5с)
-    if (h.latency > 5500) {
-      e += 5;
-      bugs.push('latency_resistance');
-    }
-
-    // TOXIC RESOURCE LOGIC: Если фундамент слаб, приток ресурсов растит хаос (энтропию)
-    if (f < 35 && w.r > 10) {
-      e += w.r * 0.7;
-      bugs.push('resource_toxicity');
-    }
-
+  const bugs: BeliefKey[] = [];
+  
+  const validLatencies = history.slice(0, ONBOARDING_NODES_COUNT + 3)
+    .map(h => h.latency)
+    .filter(l => l > 600 && l < 8000)
+    .sort((a, b) => a - b);
+  
+  let baselineLatency = 2000;
+  if (validLatencies.length > 2) baselineLatency = validLatencies.slice(1, -1).reduce((acc, v) => acc + v, 0) / (validLatencies.length - 2);
+  
+  history.forEach((h, index) => {
+    let w = WEIGHTS[h.beliefKey as BeliefKey] || { f: 0, a: 0, r: 0, e: 1 };
     f += w.f; a += w.a; r += w.r; e += w.e;
-
-    // BODY-MIND SYNC: Конфликт телесного отклика и когнитивного выбора
-    const syncMap: Record<string, string[]> = {
-      's1': ['scarcity_mindset', 'fear_of_punishment', 'family_loyalty', 'shame_of_success', 'boundary_collapse', 'hard_work_only'], // Сжатие
-      's2': ['self_permission', 'money_is_tool', 'capacity_expansion'], // Расширение
-      's3': ['betrayal_trauma', 'money_is_danger', 'impulse_spend'], // Жар (гнев/страх)
-      's4': ['imposter_syndrome', 'unconscious_fear', 'fear_of_conflict'] // Холод (замирание)
-    };
-
-    if (syncMap[h.sensation] && !syncMap[h.sensation].includes(h.beliefKey)) {
-      syncScore -= 18;
-      bugs.push('body_mind_conflict');
-    }
-
-    if (w.e > 12 || w.f < -15) bugs.push(h.beliefKey);
+    
+    // Penalize latency spikes deterministically
+    if (index >= ONBOARDING_NODES_COUNT && h.latency > baselineLatency * 1.5) e += 3;
+    
+    // Penalize somatic dissonance
+    if (w.a > 2 && (h.sensation === 's1' || h.sensation === 's4')) syncScore -= 5;
+    
+    // Track bug frequency
+    const freq = history.filter(item => item.beliefKey === h.beliefKey).length;
+    if (freq > 2 || w.e > PSYCHO_CONFIG.BUG_ENTROPY_THRESHOLD) bugs.push(h.beliefKey);
   });
 
-  f = Math.max(5, Math.min(95, f));
-  a = Math.max(5, Math.min(95, a));
-  r = Math.max(5, Math.min(95, r));
-  e = Math.max(5, Math.min(95, e));
+  f = Math.max(0, Math.min(100, f)); a = Math.max(0, Math.min(100, a));
+  r = Math.max(0, Math.min(100, r)); e = Math.max(0, Math.min(100, e));
+  syncScore = Math.max(0, Math.min(100, syncScore));
 
-  const integrity = Math.round(((f + a + r) / 3) * (1 - e / 200));
-  const neuroSync = Math.max(0, syncScore);
-  const systemHealth = Math.round((integrity * (neuroSync / 100)) / (Math.sqrt(e + 1) / 2.5));
+  const pillarsAvg = (f + a + r) / 3;
+  let integrity = Math.round(pillarsAvg * (1 - Math.pow(e / PSYCHO_CONFIG.ENTROPY_DIVISOR, 1.2)));
+  const systemHealth = Math.round((integrity * 0.6) + (syncScore * 0.4));
 
-  let phase: 'SANITATION' | 'STABILIZATION' | 'EXPANSION' = 'SANITATION';
-  if (e < 30 && integrity > 45) phase = 'STABILIZATION';
-  if (integrity > 65 && neuroSync > 75) phase = 'EXPANSION';
+  let archetypeKey: ArchetypeKey = 'THE_ARCHITECT';
+  if (e > 65) archetypeKey = 'THE_CHAOS_SURFER';
+  else if (a < 35) archetypeKey = 'THE_DRIFTER';
+  else if (a > 70 && r < 40) archetypeKey = 'THE_BURNED_HERO';
+  else if (r > 70 && a < 40) archetypeKey = 'THE_GOLDEN_PRISONER';
+  else if (f > 70 && a < 50) archetypeKey = 'THE_GUARDIAN';
 
-  const status = systemHealth < 20 ? 'CRITICAL' : systemHealth < 45 ? 'UNSTABLE' : e > 40 ? 'COMPENSATED' : 'OPTIMAL';
+  let verdictKey: VerdictKey = 'HEALTHY_SCALE';
+  if (a > 65 && f < 40) verdictKey = 'BRILLIANT_SABOTAGE';
+  else if (f > 65 && a < 45) verdictKey = 'INVISIBILE_CEILING';
+  else if (r > 60 && e > 50) verdictKey = 'LEAKY_BUCKET';
 
+  let phase: PhaseType = systemHealth < 40 ? 'SANITATION' : systemHealth < 70 ? 'STABILIZATION' : 'EXPANSION';
+  const uniqueBugs = [...new Set(bugs)];
   const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
-    const p = i < 2 ? 'SANITATION' : (phase === 'EXPANSION' ? 'EXPANSION' : 'STABILIZATION');
-    const pool = TASKS_DB[p] || TASKS_DB['SANITATION'];
-    return { day: i + 1, phase: p, ...pool[i % pool.length] };
+    const day = i + 1;
+    if (day % 3 === 0 && uniqueBugs.length > 0) {
+        const fixTask = BUG_FIX_TASKS[uniqueBugs.shift()!];
+        if (fixTask) return { day, phase: 'SANITATION', taskKey: fixTask, targetMetricKey: "Recovery" };
+    }
+    const pool = TASKS_LOGIC[phase];
+    return { day, phase, ...pool[i % pool.length] };
   });
 
   return {
     state: { foundation: f, agency: a, resource: r, entropy: e },
-    integrity, capacity: Math.round((f + r) / 2), entropyScore: e, neuroSync, systemHealth, phase,
-    archetype: { ru: "Архитектор Матрицы", ka: "მატრიცის არქიტექტორი", icon: "🏛️" },
-    roadmap,
-    graphPoints: [
-      { x: 50, y: 50 - f / 2.5 },
-      { x: 50 + r / 2.2, y: 50 + r / 3.5 },
-      { x: 50 - a / 2.2, y: 50 + a / 3.5 }
-    ],
-    status,
-    bugs: [...new Set(bugs)]
+    integrity, capacity: Math.round((f + r) / 2), entropyScore: Math.round(e), neuroSync: Math.round(syncScore), systemHealth, phase,
+    archetypeKey, verdictKey, roadmap,
+    graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
+    status: systemHealth < 40 ? 'CRITICAL' : systemHealth < 60 ? 'UNSTABLE' : 'OPTIMAL',
+    bugs: [...new Set(bugs)],
+    deepAnalysis: generateDeepAnalysis(f, a, r, e, syncScore),
+    interventionStrategy: f < 35 ? 'stabilize_foundation' : e > 55 ? 'lower_entropy' : 'activate_will',
+    coreConflict: a > 70 && f < 45 ? 'icarus' : r > 60 && e > 50 ? 'leaky_bucket' : 'invisible_cage',
+    shadowDirective: bugs.includes('hero_martyr') ? 'self_sabotage_fix' : 'integrity_boost',
+    interferenceInsight: selectInterference([...new Set(bugs)])
   };
 }

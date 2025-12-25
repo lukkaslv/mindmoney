@@ -1,118 +1,163 @@
 
-import { Scene } from './types';
+import { Scene, BeliefKey, DomainType, DomainRawConfig, DomainConfig } from './types';
 
-export const MODULE_REGISTRY: Record<string, Record<string, Scene>> = {
-  foundation: {
-    "0": {
-      id: "0", titleKey: "scenes.f0.title", descKey: "scenes.f0.desc", intensity: 3,
-      choices: [
-        { id: "f0_c1", textKey: "scenes.f0.c1", beliefKey: "family_loyalty" },
-        { id: "f0_c2", textKey: "scenes.f0.c2", beliefKey: "scarcity_mindset" },
-        { id: "f0_c3", textKey: "scenes.f0.c3", beliefKey: "self_permission" }
-      ]
-    },
-    "1": {
-      id: "1", titleKey: "scenes.f1.title", descKey: "scenes.f1.desc", intensity: 4,
-      choices: [
-        { id: "f1_c1", textKey: "scenes.f1.c1", beliefKey: "fear_of_punishment" },
-        { id: "f1_c2", textKey: "scenes.f1.c2", beliefKey: "hard_work_only" },
-        { id: "f1_c3", textKey: "scenes.f1.c3", beliefKey: "capacity_expansion" }
-      ]
-    },
-    // Nodes 2-9 generated automatically
-    ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [
-      (i + 2).toString(),
-      { id: (i + 2).toString(), titleKey: `scenes.f${i + 2}.title`, descKey: `scenes.f${i + 2}.desc`, intensity: 2, 
-        choices: [{ id: "c1", textKey: "c1", beliefKey: "scarcity_mindset" }, { id: "c2", textKey: "c2", beliefKey: "family_loyalty" }, { id: "c3", textKey: "c3", beliefKey: "self_permission" }] }
-    ])),
-    // New Nodes 10-14
-    "10": {
-      id: "10", titleKey: "scenes.f10.title", descKey: "scenes.f10.desc", intensity: 5,
-      choices: [
-        { id: "f10_c1", textKey: "scenes.f10.c1", beliefKey: "hard_work_only" },
-        { id: "f10_c2", textKey: "scenes.f10.c2", beliefKey: "scarcity_mindset" },
-        { id: "f10_c3", textKey: "scenes.f10.c3", beliefKey: "capacity_expansion" }
-      ]
-    },
-    "11": {
-      id: "11", titleKey: "scenes.f11.title", descKey: "scenes.f11.desc", intensity: 4,
-      choices: [
-        { id: "f11_c1", textKey: "scenes.f11.c1", beliefKey: "family_loyalty" },
-        { id: "f11_c2", textKey: "scenes.f11.c2", beliefKey: "boundary_collapse" },
-        { id: "f11_c3", textKey: "scenes.f11.c3", beliefKey: "self_permission" }
-      ]
-    },
-    "12": {
-      id: "12", titleKey: "scenes.f12.title", descKey: "scenes.f12.desc", intensity: 4,
-      choices: [
-        { id: "f12_c1", textKey: "scenes.f12.c1", beliefKey: "scarcity_mindset" },
-        { id: "f12_c2", textKey: "scenes.f12.c2", beliefKey: "imposter_syndrome" },
-        { id: "f12_c3", textKey: "scenes.f12.c3", beliefKey: "money_is_tool" }
-      ]
-    },
-    "13": {
-      id: "13", titleKey: "scenes.f13.title", descKey: "scenes.f13.desc", intensity: 5,
-      choices: [
-        { id: "f13_c1", textKey: "scenes.f13.c1", beliefKey: "hard_work_only" },
-        { id: "f13_c2", textKey: "scenes.f13.c2", beliefKey: "fear_of_punishment" },
-        { id: "f13_c3", textKey: "scenes.f13.c3", beliefKey: "self_permission" }
-      ]
-    },
-    "14": {
-      id: "14", titleKey: "scenes.f14.title", descKey: "scenes.f14.desc", intensity: 3,
-      choices: [
-        { id: "f14_c1", textKey: "scenes.f14.c1", beliefKey: "imposter_syndrome" },
-        { id: "f14_c2", textKey: "scenes.f14.c2", beliefKey: "unconscious_fear" },
-        { id: "f14_c3", textKey: "scenes.f14.c3", beliefKey: "capacity_expansion" }
-      ]
-    }
-  },
-  // SHIFTED: Agency now 15-24 (mapped to a10-a19 translations)
-  agency: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [
-    (i + 15).toString(),
-    {
-      id: (i + 15).toString(), titleKey: `scenes.a${i + 10}.title`, descKey: `scenes.a${i + 10}.desc`, intensity: 3,
-      choices: [
-        { id: "c1", textKey: "c1", beliefKey: "imposter_syndrome" },
-        { id: "c2", textKey: "c2", beliefKey: "fear_of_conflict" },
-        { id: "c3", textKey: "c3", beliefKey: "capacity_expansion" }
-      ]
-    }
-  ])),
-  // SHIFTED: Money now 25-34 (mapped to m20-m29 translations)
-  money: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [
-    (i + 25).toString(),
-    {
-      id: (i + 25).toString(), titleKey: `scenes.m${i + 20}.title`, descKey: `scenes.m${i + 20}.desc`, intensity: 4,
-      choices: [
-        { id: "c1", textKey: "c1", beliefKey: "money_is_danger" },
-        { id: "c2", textKey: "c2", beliefKey: "impulse_spend" },
-        { id: "c3", textKey: "c3", beliefKey: "money_is_tool" }
-      ]
-    }
-  ])),
-  // SHIFTED: Social now 35-44 (mapped to s30-s39 translations)
-  social: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [
-    (i + 35).toString(),
-    {
-      id: (i + 35).toString(), titleKey: `scenes.s${i + 30}.title`, descKey: `scenes.s${i + 30}.desc`, intensity: 3,
-      choices: [
-        { id: "c1", textKey: "c1", beliefKey: "shame_of_success" },
-        { id: "c2", textKey: "c2", beliefKey: "betrayal_trauma" },
-        { id: "c3", textKey: "c3", beliefKey: "self_permission" }
-      ]
-    }
-  ])),
-  // SHIFTED: Legacy now 45-49 (mapped to l40-l44 translations)
-  legacy: Object.fromEntries(Array.from({ length: 5 }, (_, i) => [
-    (i + 45).toString(),
-    {
-      id: (i + 45).toString(), titleKey: `scenes.l${i + 40}.title`, descKey: `scenes.l${i + 40}.desc`, intensity: 5,
-      choices: [
-        { id: "c1", textKey: "c1", beliefKey: "short_term_bias" },
-        { id: "c2", textKey: "c2", beliefKey: "unconscious_fear" },
-        { id: "c3", textKey: "c3", beliefKey: "capacity_expansion" }
-      ]
-    }
-  ]))
+// SYSTEM THRESHOLDS (SSOT for Psychology Service)
+export const PSYCHO_CONFIG = {
+  // LATENCY_THRESHOLD_MS removed in favor of dynamic baseline
+  DISTRACTION_THRESHOLD_MS: 30000, // Latencies > 30s are ignored (outliers/distractions)
+  IMPULSE_THRESHOLD_MS: 1000,      // < 1s is impulse/autoclick
+  LATENCY_PENALTY: 3,         
+  IMPULSE_PENALTY: 5,         
+  MAX_LATENCY_PENALTY: 30,
+  ENTROPY_DIVISOR: 120,       
+  FOUNDATION_CRITICAL: 35,
+  RESOURCE_GROWTH_TRIGGER: 4, 
+  BODY_MIND_PENALTY: 12,
+  BUG_ENTROPY_THRESHOLD: 8,
+  VOLATILITY_THRESHOLD: 20,        // TUNED: Lowered from 25 to 20 to detect ambivalence earlier
+  PHASE_THRESHOLDS: {
+      STABILIZATION: { entropy: 30, integrity: 45 },
+      EXPANSION: { integrity: 65, sync: 75 },
+      SANITATION_FORCED: { entropy: 55 }
+  }
 };
+
+export const ONBOARDING_NODES_COUNT = 5;
+
+// 1. RAW CONFIGURATION (Human Input Only)
+const RAW_DOMAINS: DomainRawConfig[] = [
+  { key: 'foundation', count: 15, color: 'rgba(239, 68, 68, 0.08)' },
+  { key: 'agency', count: 10, color: 'rgba(34, 197, 94, 0.08)' },
+  { key: 'money', count: 10, color: 'rgba(99, 102, 241, 0.08)' },
+  { key: 'social', count: 10, color: 'rgba(168, 85, 247, 0.08)' },
+  { key: 'legacy', count: 5, color: 'rgba(236, 72, 153, 0.08)' }
+];
+
+// 2. COMPUTED SETTINGS (System Truth)
+export const DOMAIN_SETTINGS: DomainConfig[] = RAW_DOMAINS.reduce((acc, domain, index) => {
+  const startId = index === 0 ? 0 : acc[index - 1].startId + acc[index - 1].count;
+  acc.push({ ...domain, startId });
+  return acc;
+}, [] as DomainConfig[]);
+
+export const TOTAL_NODES = DOMAIN_SETTINGS.reduce((acc, d) => acc + d.count, 0);
+
+// CONFIGURATION MAP
+// Maps RELATIVE Node Keys to specific belief keys.
+interface NodeConfig {
+  intensity: number;
+  choices: { idSuffix: string; beliefKey: BeliefKey }[];
+}
+
+// SEMANTIC MAPPING
+const NODE_CONFIGS: Record<string, NodeConfig> = {
+  // --- FOUNDATION (0-14) ---
+  "foundation_0": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "family_loyalty" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "foundation_1": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "fear_of_punishment" }, { idSuffix: "c2", beliefKey: "hard_work_only" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "foundation_2": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "boundary_collapse" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "foundation_3": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "shame_of_success" }, { idSuffix: "c2", beliefKey: "family_loyalty" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "foundation_4": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "fear_of_punishment" }, { idSuffix: "c3", beliefKey: "short_term_bias" }] },
+  "foundation_5": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "latency_resistance" }, { idSuffix: "c2", beliefKey: "unconscious_fear" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "foundation_6": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "boundary_collapse" }, { idSuffix: "c2", beliefKey: "fear_of_conflict" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "foundation_7": { intensity: 2, choices: [{ idSuffix: "c1", beliefKey: "unconscious_fear" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "foundation_8": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "body_mind_conflict" }, { idSuffix: "c2", beliefKey: "hard_work_only" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "foundation_9": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "poverty_is_virtue" }, { idSuffix: "c2", beliefKey: "imposter_syndrome" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "foundation_10": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "hard_work_only" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "foundation_11": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "family_loyalty" }, { idSuffix: "c2", beliefKey: "money_is_tool" }, { idSuffix: "c3", beliefKey: "boundary_collapse" }] },
+  "foundation_12": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "imposter_syndrome" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "foundation_13": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "hard_work_only" }, { idSuffix: "c2", beliefKey: "fear_of_punishment" }, { idSuffix: "c3", beliefKey: "body_mind_conflict" }] },
+  "foundation_14": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "impulse_spend" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+
+  // --- AGENCY ---
+  "agency_0": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "fear_of_conflict" }, { idSuffix: "c2", beliefKey: "unconscious_fear" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "agency_1": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "fear_of_punishment" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "agency_2": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "boundary_collapse" }, { idSuffix: "c2", beliefKey: "fear_of_conflict" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "agency_3": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "betrayal_trauma" }, { idSuffix: "c2", beliefKey: "unconscious_fear" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "agency_4": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "hard_work_only" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "agency_5": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "shame_of_success" }, { idSuffix: "c2", beliefKey: "imposter_syndrome" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "agency_6": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "hard_work_only" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "agency_7": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "betrayal_trauma" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "agency_8": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "fear_of_conflict" }, { idSuffix: "c2", beliefKey: "boundary_collapse" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "agency_9": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "fear_of_conflict" }, { idSuffix: "c2", beliefKey: "imposter_syndrome" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+
+  // --- MONEY ---
+  "money_0": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "money_is_danger" }, { idSuffix: "c2", beliefKey: "impulse_spend" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "money_1": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "poverty_is_virtue" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "money_2": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "shame_of_success" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "money_3": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "impulse_spend" }, { idSuffix: "c2", beliefKey: "short_term_bias" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "money_4": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "boundary_collapse" }, { idSuffix: "c2", beliefKey: "fear_of_conflict" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "money_5": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "money_6": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "money_is_danger" }, { idSuffix: "c2", beliefKey: "impulse_spend" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "money_7": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "resource_toxicity" }, { idSuffix: "c2", beliefKey: "impulse_spend" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "money_8": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "hard_work_only" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "money_9": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "shame_of_success" }, { idSuffix: "c2", beliefKey: "poverty_is_virtue" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+
+  // --- SOCIAL ---
+  "social_0": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "shame_of_success" }, { idSuffix: "c2", beliefKey: "body_mind_conflict" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "social_1": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "boundary_collapse" }, { idSuffix: "c2", beliefKey: "betrayal_trauma" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "social_2": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "fear_of_conflict" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "social_3": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "fear_of_punishment" }, { idSuffix: "c2", beliefKey: "betrayal_trauma" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "social_4": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "poverty_is_virtue" }, { idSuffix: "c2", beliefKey: "boundary_collapse" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "social_5": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "betrayal_trauma" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "social_6": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "latency_resistance" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "social_7": { intensity: 3, choices: [{ idSuffix: "c1", beliefKey: "imposter_syndrome" }, { idSuffix: "c2", beliefKey: "shame_of_success" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "social_8": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "fear_of_conflict" }, { idSuffix: "c2", beliefKey: "betrayal_trauma" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "social_9": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "poverty_is_virtue" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+
+  // --- LEGACY ---
+  "legacy_0": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "short_term_bias" }, { idSuffix: "c2", beliefKey: "scarcity_mindset" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "legacy_1": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "money_is_danger" }, { idSuffix: "c2", beliefKey: "family_loyalty" }, { idSuffix: "c3", beliefKey: "self_permission" }] },
+  "legacy_2": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "scarcity_mindset" }, { idSuffix: "c2", beliefKey: "family_loyalty" }, { idSuffix: "c3", beliefKey: "money_is_tool" }] },
+  "legacy_3": { intensity: 4, choices: [{ idSuffix: "c1", beliefKey: "latency_resistance" }, { idSuffix: "c2", beliefKey: "fear_of_punishment" }, { idSuffix: "c3", beliefKey: "capacity_expansion" }] },
+  "legacy_4": { intensity: 5, choices: [{ idSuffix: "c1", beliefKey: "poverty_is_virtue" }, { idSuffix: "c2", beliefKey: "fear_of_conflict" }, { idSuffix: "c3", beliefKey: "self_permission" }] }
+};
+
+// DEFAULTS FOR SAFETY
+const DEFAULT_NODE_CONFIG: NodeConfig = {
+    intensity: 3,
+    choices: [
+        { idSuffix: "c1", beliefKey: "self_permission" },
+        { idSuffix: "c2", beliefKey: "capacity_expansion" },
+        { idSuffix: "c3", beliefKey: "scarcity_mindset" }
+    ]
+};
+
+const DOMAIN_DEFAULTS: Record<string, NodeConfig> = {
+    foundation: DEFAULT_NODE_CONFIG,
+    agency: DEFAULT_NODE_CONFIG,
+    money: DEFAULT_NODE_CONFIG,
+    social: DEFAULT_NODE_CONFIG,
+    legacy: DEFAULT_NODE_CONFIG
+};
+
+// FACTORY
+const buildRegistry = () => {
+  const registry: Record<string, Record<string, Scene>> = {};
+
+  DOMAIN_SETTINGS.forEach(domain => {
+    registry[domain.key] = {};
+    for (let i = 0; i < domain.count; i++) {
+      const absoluteId = (domain.startId + i).toString();
+      const relativeKey = `${domain.key}_${i}`;
+      const config = NODE_CONFIGS[relativeKey] || DOMAIN_DEFAULTS[domain.key];
+      const translationKeyBase = `scenes.${relativeKey}`;
+
+      registry[domain.key][absoluteId] = {
+        id: absoluteId,
+        key: relativeKey,
+        titleKey: `${translationKeyBase}.title`,
+        descKey: `${translationKeyBase}.desc`,
+        intensity: config.intensity,
+        choices: config.choices.map((c, idx) => ({
+          id: `${absoluteId}_${c.idSuffix}`, 
+          textKey: `${translationKeyBase}.c${idx + 1}`,
+          beliefKey: c.beliefKey
+        }))
+      };
+    }
+  });
+
+  return registry;
+};
+
+export const MODULE_REGISTRY = buildRegistry();

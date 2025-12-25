@@ -13,13 +13,19 @@
         --bg: #ffffff;
       }
       
+      html, body {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        overscroll-behavior: none; /* Critical for Telegram WebApp */
+        -webkit-overflow-scrolling: touch;
+      }
+
       body { 
         background: var(--bg);
         color: #000; 
         font-family: 'Inter', sans-serif; 
         margin: 0; 
-        height: 100vh;
-        overflow: hidden;
       }
 
       body::before {
@@ -44,7 +50,7 @@
         opacity: 0.5;
       }
 
-      #root { height: 100%; }
+      #root { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
       .animate-in {
         animation: slideUp 0.8s cubic-bezier(0.2, 1, 0.2, 1) forwards;
@@ -54,12 +60,8 @@
         animation: spin 12s linear infinite;
       }
 
-      .animate-progress {
-        animation: progress 2s ease-in-out infinite;
-      }
-
-      .animate-marquee {
-        animation: marquee 20s linear infinite;
+      .animate-pulse-slow {
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
 
       .animate-scan-line {
@@ -84,20 +86,9 @@
         100% { transform: translateX(100%); }
       }
 
-      @keyframes marquee {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-100%); }
-      }
-
-      @keyframes progress {
-        0% { transform: translateX(-100%); }
-        50% { transform: translateX(0%); }
-        100% { transform: translateX(100%); }
-      }
-
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(0.95); }
       }
 
       @keyframes slideUp {
@@ -105,6 +96,12 @@
         to { opacity: 1; transform: translateY(0); }
       }
 
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+
+      /* Hide Scrollbar */
       ::-webkit-scrollbar { display: none; }
       
       input::placeholder { font-weight: 900; letter-spacing: 0.1em; opacity: 0.2; }

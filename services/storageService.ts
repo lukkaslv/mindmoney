@@ -11,60 +11,84 @@ export const STORAGE_KEYS = {
   SCAN_HISTORY: 'genesis_scan_history'
 } as const;
 
-const getStorage = () => {
-  if (typeof (window as any).storage !== 'undefined') {
-    return (window as any).storage;
+// Deterministic Pseudo-Counter for ID-based persistence without Date.now()
+let persistenceCounter = 0;
+
+// In-Memory Fallback for sandbox environments (artifacts)
+const memoryStore: Record<string, string> = {};
+
+const getStorageProvider = () => {
+  try {
+    const testKey = '__storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    return window.localStorage;
+  } catch (e) {
+    console.warn('LocalStorage unavailable. Operating in RAM mode.');
+    return {
+      getItem: (key: string) => memoryStore[key] || null,
+      setItem: (key: string, val: string) => { memoryStore[key] = val; },
+      removeItem: (key: string) => { delete memoryStore[key]; }
+    };
   }
-  return {
-    getItem: (key: string) => localStorage.getItem(key),
-    setItem: (key: string, val: string) => localStorage.setItem(key, val),
-    removeItem: (key: string) => localStorage.removeItem(key)
-  };
 };
 
+const provider = getStorageProvider();
+
 export const StorageService = {
-  save: (key: string, data: any) => {
+  save: (key: string, data: unknown) => {
     try {
-      getStorage().setItem(key, JSON.stringify(data));
+      provider.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.error('Storage Save Error:', e);
+      console.error('Storage Persistence Failure:', e);
     }
   },
   
   load: <T,>(key: string, fallback: T): T => {
     try {
-      const item = getStorage().getItem(key);
-      return item ? JSON.parse(item) : fallback;
+      const item = provider.getItem(key);
+      if (!item) return fallback;
+      return JSON.parse(item) as T;
     } catch (e) {
-      console.warn(`Storage Load Error for ${key}, resetting to fallback.`);
+      console.warn(`Data Corruption at ${key}. Reverting to baseline.`);
       return fallback;
     }
   },
 
   async saveScan(result: AnalysisResult): Promise<void> {
-    const history = StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } });
+    const history = StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { 
+      scans: [], 
+      latestScan: null, 
+      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
+    });
     
-    // Enrich result with real wall-clock time for history display
-    const realTimeResult = { ...result, createdAt: Date.now() };
+    // Deterministic progression marker instead of Date.now()
+    persistenceCounter++;
+    const deterministicResult = { ...result, createdAt: persistenceCounter };
     
-    history.scans.push(realTimeResult);
-    history.latestScan = realTimeResult;
-    history.evolutionMetrics.entropyTrend.push(realTimeResult.entropyScore);
-    history.evolutionMetrics.integrityTrend.push(realTimeResult.integrity);
-    history.evolutionMetrics.dates.push(new Date(realTimeResult.createdAt).toLocaleDateString());
+    history.scans.push(deterministicResult);
+    history.latestScan = deterministicResult;
+    history.evolutionMetrics.entropyTrend.push(deterministicResult.entropyScore);
+    history.evolutionMetrics.integrityTrend.push(deterministicResult.integrity);
+    history.evolutionMetrics.dates.push(`ID_${persistenceCounter}`);
 
     StorageService.save(STORAGE_KEYS.SCAN_HISTORY, history);
   },
 
   getScanHistory(): ScanHistory {
-    return StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } });
+    return StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { 
+      scans: [], 
+      latestScan: null, 
+      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
+    });
   },
   
   clear: () => {
     Object.values(STORAGE_KEYS).forEach(key => {
       if (key !== STORAGE_KEYS.LANG) {
-        getStorage().removeItem(key);
+        provider.removeItem(key);
       }
     });
+    persistenceCounter = 0;
   }
 };

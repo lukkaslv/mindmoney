@@ -117,8 +117,8 @@ export interface SystemConflict {
 }
 
 export interface AnalysisResult {
-  timestamp: number; // Sum of latencies for determinism
-  createdAt?: number; // Real wall-clock time for history display
+  timestamp: number; 
+  createdAt?: number; 
   shareCode: string;
   state: { foundation: number; agency: number; resource: number; entropy: number };
   integrity: number;
@@ -132,7 +132,7 @@ export interface AnalysisResult {
   archetypeMatch: number; 
   archetypeSpectrum: { key: ArchetypeKey; score: number }[]; 
   verdictKey: VerdictKey; 
-  lifeScriptKey: string; // Added for type safety
+  lifeScriptKey: string;
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';

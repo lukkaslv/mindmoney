@@ -39,7 +39,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, t }) => {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('error');
         return;
     }
-    // Correctly signaling standard entry
     onLogin("genesis_lab_entry", isDemo);
   };
 
@@ -59,7 +58,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, t }) => {
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">{t.subtitle}</p>
         </div>
 
-        {/* INSTRUCTIONS GRID */}
+        {/* ETHICAL PROTOCOL GRID */}
         <div className="grid grid-cols-1 gap-4">
             {[
                 { i: "01", t: onboarding.step1_t, d: onboarding.step1_d },
@@ -76,7 +75,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, t }) => {
             ))}
         </div>
 
-        {/* DISCLAIMER / PROTOCOL SIGNING */}
+        {/* INFORMED CONSENT BLOCK */}
         <div className="space-y-4 pt-4">
             {!agreed ? (
                 <div 
@@ -103,9 +102,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLogin, t }) => {
                 </div>
             )}
             
-            <p className="text-[9px] text-slate-400 font-medium leading-relaxed text-center italic opacity-70">
-                {t.legal_disclaimer}
-            </p>
+            <div className="space-y-2 text-[9px] text-slate-400 font-medium leading-relaxed text-center italic opacity-70">
+                <p>{t.legal_disclaimer}</p>
+                <p className="font-bold border-t border-slate-100 pt-2 text-indigo-500/70">PRIVACY: 100% LOCAL STORAGE // NO SERVER UPLINK</p>
+            </div>
         </div>
 
         <div className="pt-2">

@@ -42,13 +42,23 @@ export const DashboardView = memo<DashboardViewProps>(({
     return t.dashboard.desc;
   }, [result, t, globalProgress]);
 
+  const activeDomainCount = useMemo(() => 
+    DOMAIN_SETTINGS.filter(d => nodes.filter(n => n.domain === d.key && n.done).length === d.count).length
+  , [nodes]);
+
   return (
     <div className="space-y-6 animate-in flex flex-col h-full">
       <header className="space-y-3 shrink-0">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            Status <span className="text-indigo-600">Report</span>
-        </h2>
-        <div className={`p-4 rounded-2xl border transition-all duration-500 ${result && result.entropyScore > 60 ? 'bg-red-50 border-red-100' : 'bg-indigo-50/50 border-indigo-100/30'}`}>
+        <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                Status <span className="text-indigo-600">Report</span>
+            </h2>
+            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-tighter">Live Uplink</span>
+            </div>
+        </div>
+        <div className={`p-4 rounded-2xl border transition-all duration-500 ${result && result.entropyScore > 60 ? 'bg-red-50 border-red-100 shadow-red-100/50' : 'bg-indigo-50/50 border-indigo-100/30'}`}>
            <p className={`text-[11px] font-bold italic leading-relaxed ${result && result.entropyScore > 60 ? 'text-red-700' : 'text-indigo-700'}`}>
               {humanInsight}
            </p>
@@ -101,7 +111,10 @@ export const DashboardView = memo<DashboardViewProps>(({
 
       {!currentDomain ? (
         <div className="space-y-3 flex-1">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 px-1">{t.dashboard.select_domain}</h3>
+          <div className="flex justify-between items-center px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{t.dashboard.select_domain}</h3>
+            <span className="text-[9px] font-mono font-bold text-slate-300 uppercase">{activeDomainCount} / 5 SECURED</span>
+          </div>
           <div className="grid grid-cols-1 gap-3 pb-8">
             {DOMAIN_SETTINGS.map(config => {
                 const domainNodes = nodes.filter(n => n.domain === config.key);

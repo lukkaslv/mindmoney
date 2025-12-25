@@ -20,7 +20,10 @@ interface LayoutProps {
   onReset: () => void;
 }
 
-// Deterministic Pseudo-Random Generator (LCG)
+/**
+ * Deterministic Pseudo-Random Generator (LCG)
+ * Genesis OS v3.0 Constitution requirement: NO Math.random() in production flow.
+ */
 const seededRandom = (seed: number) => {
   let state = seed % 2147483647;
   if (state <= 0) state += 2147483646;
@@ -53,7 +56,8 @@ export const Layout = memo<LayoutProps>(({
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
       
-      const random = seededRandom(42); // Consistent seed for Genesis OS
+      // Deterministic noise generation for reproducible session environment
+      const random = seededRandom(42); 
       
       let b0, b1, b2, b3, b4, b5, b6;
       b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;

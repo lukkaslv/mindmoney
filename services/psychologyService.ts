@@ -1,5 +1,5 @@
 
-import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel, VerdictKey } from '../types';
+import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel } from '../types';
 import { DOMAIN_SETTINGS } from '../constants';
 import { CompatibilityEngine } from './compatibilityEngine';
 
@@ -90,13 +90,17 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
 
   const latencies = history.map(h => h.latency).filter(l => l > 400 && l < 15000);
   const userBaseline = latencies.slice(0, 5).reduce((sum, l) => sum + l, 0) / Math.max(1, Math.min(5, latencies.length)) || 2000;
-  const avgLatency = latencies.reduce((sum, l) => sum + l, 0) / latencies.length || userBaseline;
+  
+  // Advanced Signal Analysis: Using Median for Robustness
+  const sortedLatencies = [...latencies].sort((x, y) => x - y);
+  const medianLatency = sortedLatencies[Math.floor(sortedLatencies.length / 2)] || userBaseline;
   
   const latencyVariance = latencies.length > 1 
-    ? Math.sqrt(latencies.reduce((sum, l) => sum + Math.pow(l - avgLatency, 2), 0) / latencies.length) 
+    ? Math.sqrt(latencies.reduce((sum, l) => sum + Math.pow(l - medianLatency, 2), 0) / latencies.length) 
     : 0;
 
-  const confidenceScore = Math.max(0, 100 - (latencyVariance / avgLatency * 120));
+  // Confidence Score: High variance relative to median decreases signal trust
+  const confidenceScore = Math.max(0, 100 - (latencyVariance / medianLatency * 110));
 
   history.forEach((h, index) => {
     if (parseInt(h.nodeId) < 5) return;
@@ -142,7 +146,7 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
 
   const integrityBase = Math.round(((f + a + r) / 3) * (1 - (e / 130)));
   const systemHealth = Math.round((integrityBase * 0.55) + (syncScore * 0.45));
-  const coherence = Math.max(0, 100 - (latencyVariance / avgLatency * 80));
+  const coherence = Math.max(0, 100 - (latencyVariance / medianLatency * 70));
   const stability = Math.round((f * 0.65) + (a * 0.35));
   
   const status: MetricLevel = systemHealth > 80 ? 'OPTIMAL' : systemHealth > 50 ? 'STABLE' : systemHealth > 30 ? 'STRAINED' : 'DISRUPTED';
@@ -170,6 +174,7 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
   const totalWeight = Math.max(1, primary.score + secondary.score);
   const matchPercent = Math.round((primary.score / totalWeight) * 100);
 
+  // Safety Net: Force SANITATION if foundation is critical
   let phase: PhaseType = systemHealth < 35 ? 'SANITATION' : systemHealth < 68 ? 'STABILIZATION' : 'EXPANSION';
   if (f < 30) phase = 'SANITATION';
 
@@ -186,20 +191,17 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     return { day, phase, ...taskData };
   });
 
-  // Synthesize Life Script Key
+  // Robust LifeScript Synthesis
   let synthesizedLifeScript = "healthy_integration";
   if (a > 75 && f < 35) synthesizedLifeScript = "high_agency_low_foundation";
   else if (r > 70 && e > 50) synthesizedLifeScript = "high_resource_high_entropy";
   else if (a < 40 && f > 70) synthesizedLifeScript = "low_agency_high_foundation";
   else if (e > 55) synthesizedLifeScript = "high_volatility";
   else if (syncScore < 45) synthesizedLifeScript = "somatic_dissonance";
-  else if (activePatterns.includes('family_loyalty') && r < 40) synthesizedLifeScript = "capacity_block";
-  else if (activePatterns.includes('shame_of_success')) synthesizedLifeScript = "resource_shame";
 
-  const verdictKey: VerdictKey = a > 75 && f < 35 ? 'BRILLIANT_SABOTAGE' : f > 75 && a < 40 ? 'INVISIBILE_CEILING' : r > 70 && e > 55 ? 'LEAKY_BUCKET' : 'HEALTHY_SCALE';
-
-  const partialResult: AnalysisResult = {
+  const result: AnalysisResult = {
     timestamp: Math.round(history.reduce((acc, h) => acc + h.latency, 0)), 
+    createdAt: Date.now(),
     shareCode: '',
     state: { foundation: f, agency: a, resource: r, entropy: e },
     integrity: integrityBase, 
@@ -212,7 +214,7 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     secondaryArchetypeKey: secondary.key,
     archetypeMatch: matchPercent,
     archetypeSpectrum,
-    verdictKey,
+    verdictKey: a > 75 && f < 35 ? 'BRILLIANT_SABOTAGE' : f > 75 && a < 40 ? 'INVISIBILE_CEILING' : r > 70 && e > 55 ? 'LEAKY_BUCKET' : 'HEALTHY_SCALE',
     lifeScriptKey: synthesizedLifeScript,
     roadmap,
     graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
@@ -230,6 +232,6 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     confidenceScore: Math.round(confidenceScore)
   };
 
-  partialResult.shareCode = CompatibilityEngine.generateShareCode(partialResult);
-  return partialResult;
+  result.shareCode = CompatibilityEngine.generateShareCode(result);
+  return result;
 }

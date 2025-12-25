@@ -20,6 +20,19 @@ interface LayoutProps {
   onReset: () => void;
 }
 
+/**
+ * Seeded PRNG for Deterministic Noise Generation
+ * Genesis OS v3.0 Constitution requirement: NO Math.random() in production flow.
+ */
+const seededRandom = (seed: number) => {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 48271) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
+};
+
 export const Layout = memo<LayoutProps>(({ 
   children, 
   lang, 
@@ -44,10 +57,13 @@ export const Layout = memo<LayoutProps>(({
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
       
+      // Deterministic noise generation for reproducible session environment
+      const random = seededRandom(42); 
+      
       let b0, b1, b2, b3, b4, b5, b6;
       b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
       for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
+        const white = random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
         b2 = 0.96900 * b2 + white * 0.1538520;
@@ -132,7 +148,7 @@ export const Layout = memo<LayoutProps>(({
       <footer className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md px-6 py-4 glass-card border-t border-slate-100 z-50 flex justify-between items-center rounded-t-3xl shadow-2xl">
         <div className="flex flex-col">
             <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">System Build</span>
-            <span className="text-[9px] font-mono font-bold text-slate-400">v6.4.2-STABLE</span>
+            <span className="text-[9px] font-mono font-bold text-slate-400">v6.4.3-STABLE</span>
         </div>
         <button 
           onClick={onReset} 

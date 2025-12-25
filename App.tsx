@@ -51,6 +51,7 @@ const App: React.FC = () => {
 
   const adaptiveState = useMemo(() => {
     const history = engine.state.history;
+    // Unified baseline calculation: first 5 nodes
     const baseline = history.length > 0 
       ? history.slice(0, 5).reduce((a, b) => a + b.latency, 0) / Math.max(1, Math.min(5, history.length))
       : 2000;

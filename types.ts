@@ -117,7 +117,8 @@ export interface SystemConflict {
 }
 
 export interface AnalysisResult {
-  timestamp: number;
+  timestamp: number; // Sum of latencies for determinism
+  createdAt?: number; // Real wall-clock time for history display
   shareCode: string;
   state: { foundation: number; agency: number; resource: number; entropy: number };
   integrity: number;
@@ -131,6 +132,7 @@ export interface AnalysisResult {
   archetypeMatch: number; 
   archetypeSpectrum: { key: ArchetypeKey; score: number }[]; 
   verdictKey: VerdictKey; 
+  lifeScriptKey: string; // Added for type safety
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
@@ -161,7 +163,6 @@ export interface ScanHistory {
   };
 }
 
-// Added missing CompatibilityReport interface for interpersonal analysis results
 export interface CompatibilityReport {
   overallScore: number;
   domainSynergies: DomainType[];

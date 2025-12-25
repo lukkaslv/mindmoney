@@ -1,5 +1,5 @@
 
-import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel } from '../types';
+import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel, VerdictKey } from '../types';
 import { DOMAIN_SETTINGS } from '../constants';
 import { CompatibilityEngine } from './compatibilityEngine';
 
@@ -171,6 +171,8 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
   const matchPercent = Math.round((primary.score / totalWeight) * 100);
 
   let phase: PhaseType = systemHealth < 35 ? 'SANITATION' : systemHealth < 68 ? 'STABILIZATION' : 'EXPANSION';
+  if (f < 30) phase = 'SANITATION';
+
   const uniquePatterns = [...new Set(activePatterns)];
   const pool = TASKS_LOGIC[phase];
   const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
@@ -184,15 +186,34 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     return { day, phase, ...taskData };
   });
 
-  const partialResult = {
-    timestamp: history[history.length - 1]?.latency || 0, // Deterministic timestamp from last latency instead of Date.now()
+  // Synthesize Life Script Key
+  let synthesizedLifeScript = "healthy_integration";
+  if (a > 75 && f < 35) synthesizedLifeScript = "high_agency_low_foundation";
+  else if (r > 70 && e > 50) synthesizedLifeScript = "high_resource_high_entropy";
+  else if (a < 40 && f > 70) synthesizedLifeScript = "low_agency_high_foundation";
+  else if (e > 55) synthesizedLifeScript = "high_volatility";
+  else if (syncScore < 45) synthesizedLifeScript = "somatic_dissonance";
+  else if (activePatterns.includes('family_loyalty') && r < 40) synthesizedLifeScript = "capacity_block";
+  else if (activePatterns.includes('shame_of_success')) synthesizedLifeScript = "resource_shame";
+
+  const verdictKey: VerdictKey = a > 75 && f < 35 ? 'BRILLIANT_SABOTAGE' : f > 75 && a < 40 ? 'INVISIBILE_CEILING' : r > 70 && e > 55 ? 'LEAKY_BUCKET' : 'HEALTHY_SCALE';
+
+  const partialResult: AnalysisResult = {
+    timestamp: Math.round(history.reduce((acc, h) => acc + h.latency, 0)), 
+    shareCode: '',
     state: { foundation: f, agency: a, resource: r, entropy: e },
-    integrity: integrityBase, capacity: Math.round((f + r) / 2), entropyScore: Math.round(e), neuroSync: Math.round(syncScore), systemHealth, phase,
+    integrity: integrityBase, 
+    capacity: Math.round((f + r) / 2), 
+    entropyScore: Math.round(e), 
+    neuroSync: Math.round(syncScore), 
+    systemHealth, 
+    phase,
     archetypeKey: primary.key,
     secondaryArchetypeKey: secondary.key,
     archetypeMatch: matchPercent,
     archetypeSpectrum,
-    verdictKey: a > 75 && f < 35 ? 'BRILLIANT_SABOTAGE' : f > 75 && a < 40 ? 'INVISIBILE_CEILING' : r > 70 && e > 55 ? 'LEAKY_BUCKET' : 'HEALTHY_SCALE',
+    verdictKey,
+    lifeScriptKey: synthesizedLifeScript,
     roadmap,
     graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
     status: systemHealth < 25 ? 'CRITICAL' : systemHealth < 55 ? 'UNSTABLE' : 'OPTIMAL',
@@ -207,19 +228,7 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     interferenceInsight: activePatterns.includes('family_loyalty') ? 'family_vs_money' : undefined,
     clarity: Math.min(100, history.length * 2.5),
     confidenceScore: Math.round(confidenceScore)
-  } as AnalysisResult;
-
-  let synthesizedLifeScript = "";
-  if (a > 75 && f < 35) synthesizedLifeScript = "high_agency_low_foundation";
-  else if (r > 70 && e > 50) synthesizedLifeScript = "high_resource_high_entropy";
-  else if (a < 40 && f > 70) synthesizedLifeScript = "low_agency_high_foundation";
-  else if (e > 55) synthesizedLifeScript = "high_volatility";
-  else if (syncScore < 45) synthesizedLifeScript = "somatic_dissonance";
-  else if (activePatterns.includes('family_loyalty') && r < 40) synthesizedLifeScript = "capacity_block";
-  else if (activePatterns.includes('shame_of_success')) synthesizedLifeScript = "resource_shame";
-  else synthesizedLifeScript = "healthy_integration";
-
-  (partialResult as any).lifeScriptKey = synthesizedLifeScript;
+  };
 
   partialResult.shareCode = CompatibilityEngine.generateShareCode(partialResult);
   return partialResult;

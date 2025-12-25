@@ -71,7 +71,9 @@ export const EvolutionDashboard: React.FC<EvolutionDashboardProps> = memo(({ his
       <div className="pt-4 border-t border-white/5 space-y-2">
          {history.scans.slice(-3).reverse().map((scan, i) => (
             <div key={i} className="flex justify-between items-center text-[10px] font-mono opacity-60">
-                <span className="text-slate-400">{new Date(scan.timestamp).toLocaleDateString()}</span>
+                <span className="text-slate-400">
+                    {scan.createdAt ? new Date(scan.createdAt).toLocaleDateString() : 'N/A'}
+                </span>
                 <span className="text-white font-black">{scan.archetypeKey.replace('THE_', '')}</span>
                 <span className={scan.systemHealth > 60 ? 'text-emerald-500' : 'text-red-500'}>{scan.systemHealth}%</span>
             </div>

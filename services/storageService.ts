@@ -11,7 +11,6 @@ export const STORAGE_KEYS = {
   SCAN_HISTORY: 'genesis_scan_history'
 } as const;
 
-// Abstract storage to handle window.storage (if provided) or localStorage
 const getStorage = () => {
   if (typeof (window as any).storage !== 'undefined') {
     return (window as any).storage;
@@ -43,20 +42,21 @@ export const StorageService = {
   },
 
   async saveScan(result: AnalysisResult): Promise<void> {
-    // FIX: Using explicit StorageService reference instead of 'this' to avoid generic inference issues in object literals
     const history = StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } });
     
-    history.scans.push(result);
-    history.latestScan = result;
-    history.evolutionMetrics.entropyTrend.push(result.entropyScore);
-    history.evolutionMetrics.integrityTrend.push(result.integrity);
-    history.evolutionMetrics.dates.push(new Date(result.timestamp).toLocaleDateString());
+    // Enrich result with real wall-clock time for history display
+    const realTimeResult = { ...result, createdAt: Date.now() };
+    
+    history.scans.push(realTimeResult);
+    history.latestScan = realTimeResult;
+    history.evolutionMetrics.entropyTrend.push(realTimeResult.entropyScore);
+    history.evolutionMetrics.integrityTrend.push(realTimeResult.integrity);
+    history.evolutionMetrics.dates.push(new Date(realTimeResult.createdAt).toLocaleDateString());
 
-    this.save(STORAGE_KEYS.SCAN_HISTORY, history);
+    StorageService.save(STORAGE_KEYS.SCAN_HISTORY, history);
   },
 
   getScanHistory(): ScanHistory {
-    // FIX: Using explicit StorageService reference instead of 'this'
     return StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } });
   },
   

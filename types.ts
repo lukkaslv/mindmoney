@@ -1,5 +1,6 @@
 
 export type DomainType = 'foundation' | 'agency' | 'money' | 'social' | 'legacy';
+export type MetricLevel = 'STABLE' | 'OPTIMAL' | 'STRAINED' | 'DISRUPTED';
 
 export interface DomainRawConfig {
   key: DomainType;
@@ -63,7 +64,24 @@ export interface GameHistoryItem {
   beliefKey: BeliefKey;
   sensation: string;
   latency: number;
-  nodeId?: string; // Added to track correlations
+  nodeId: string;
+  domain: DomainType;
+}
+
+export interface Contradiction {
+  type: 'latency_mask' | 'somatic_clash' | 'domain_discord';
+  nodeId: string;
+  beliefKey: BeliefKey;
+  severity: number;
+  description: string;
+}
+
+export interface AdaptiveState {
+  clarity: number; 
+  contradictions: Contradiction[];
+  isComplete: boolean;
+  suggestedNextNodeId: string | null;
+  confidenceScore: number; // 0-100 based on latency stability
 }
 
 export type PhaseType = 'SANITATION' | 'STABILIZATION' | 'EXPANSION';
@@ -83,7 +101,24 @@ export interface NeuralCorrelation {
   descriptionKey: string;
 }
 
+export interface IntegrityBreakdown {
+  coherence: number;
+  sync: number;
+  stability: number;
+  label: string;
+  description: string;
+  status: MetricLevel;
+}
+
+export interface SystemConflict {
+  key: string;
+  severity: 'low' | 'medium' | 'high';
+  domain: DomainType;
+}
+
 export interface AnalysisResult {
+  timestamp: number;
+  shareCode: string;
   state: { foundation: number; agency: number; resource: number; entropy: number };
   integrity: number;
   capacity: number;
@@ -94,22 +129,45 @@ export interface AnalysisResult {
   archetypeKey: ArchetypeKey;
   secondaryArchetypeKey?: ArchetypeKey;
   archetypeMatch: number; 
-  archetypeSpectrum: { key: ArchetypeKey; score: number }[]; // Full spectrum
+  archetypeSpectrum: { key: ArchetypeKey; score: number }[]; 
   verdictKey: VerdictKey; 
   roadmap: ProtocolStep[];
   graphPoints: { x: number; y: number }[];
   status: 'OPTIMAL' | 'COMPENSATED' | 'UNSTABLE' | 'CRITICAL';
   bugs: BeliefKey[];
-  correlations: NeuralCorrelation[]; // Tracked "Why"
+  correlations: NeuralCorrelation[]; 
+  conflicts: SystemConflict[];
   somaticProfile: {
     blocks: number;
     resources: number;
     dominantSensation: string;
   };
+  integrityBreakdown: IntegrityBreakdown;
   interventionStrategy: string; 
   coreConflict: string; 
   shadowDirective: string;
   interferenceInsight?: string;
+  clarity: number;
+  confidenceScore: number;
+}
+
+export interface ScanHistory {
+  scans: AnalysisResult[];
+  latestScan: AnalysisResult | null;
+  evolutionMetrics: {
+    entropyTrend: number[];
+    integrityTrend: number[];
+    dates: string[];
+  };
+}
+
+export interface CompatibilityReport {
+  overallScore: number;
+  domainSynergies: DomainType[];
+  domainConflicts: DomainType[];
+  recommendations: string[];
+  relationshipType: 'Synergy' | 'Complementary' | 'Challenging' | 'Neutral';
+  partnerArchetype: ArchetypeKey;
 }
 
 export interface Translations {
@@ -149,7 +207,13 @@ export interface Translations {
   directives: Record<string, string>;
   interferences: Record<string, string>;
   correlation_types: Record<string, string>;
+  integrity_audit: Record<string, string>;
   system_commentary: string[];
   auth_hint: string;
   legal_disclaimer: string;
+  safety: {
+    mode_title: string;
+    mode_desc: string;
+    external_help: string;
+  };
 }

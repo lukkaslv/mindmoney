@@ -1,7 +1,8 @@
 
 import React, { memo } from 'react';
-import { DomainType, Translations, Choice, Scene } from '../../types';
-import { DOMAIN_SETTINGS } from '../../constants';
+import { DomainType, Translations, Choice, Scene, AdaptiveState } from '../../types';
+import { DOMAIN_SETTINGS, ONBOARDING_NODES_COUNT } from '../../constants';
+import { AdaptiveProgressBar } from '../AdaptiveProgressBar';
 
 // --- COMPONENTS ---
 
@@ -13,13 +14,13 @@ interface TestViewProps {
   onChoice: (c: Choice) => void;
   onExit: () => void;
   getSceneText: (path: string) => string;
+  adaptiveState: AdaptiveState;
 }
 
-export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene, onChoice, onExit, getSceneText }) => {
-  const domainConfig = DOMAIN_SETTINGS.find(d => d.key === activeModule);
+export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene, onChoice, onExit, getSceneText, adaptiveState }) => {
   const numericId = parseInt(currentId);
-  const relativeId = numericId - (domainConfig?.startId || 0) + 1;
-  const totalInDomain = domainConfig?.count || 10;
+  const isCalibration = numericId < 3;
+  const isAdaptive = adaptiveState.clarity > 20;
 
   // DETERMINISTIC SYSTEM COMMENTARY
   const showComment = numericId > 0 && (numericId % 7 === 0 || numericId % 11 === 0);
@@ -34,22 +35,42 @@ export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene
              <button onClick={onExit} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 font-black text-sm hover:bg-slate-200 transition-colors active:scale-90">✕</button>
              <div className="flex flex-col">
                 <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-widest leading-none">MODULE</span>
-                <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest leading-none mt-1">{t.domains[activeModule]}</span>
+                <span className="text-[11px] font-black text-indigo-600 uppercase tracking-widest leading-none mt-1">
+                  {isCalibration ? 'CALIBRATION' : t.domains[activeModule]}
+                </span>
              </div>
-         </div>
-         <div className="flex flex-col items-end">
-            <span className="text-[9px] font-mono text-slate-400 font-bold uppercase tracking-widest leading-none">NODE</span>
-            <span className="text-[14px] font-black text-slate-800 leading-none mt-1">{relativeId}<span className="text-slate-300 text-[10px]">/{totalInDomain}</span></span>
          </div>
       </div>
       
-      {/* PROGRESS BAR */}
-      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden shrink-0">
-         <div className="h-full bg-indigo-500 transition-all duration-500 ease-out" style={{ width: `${(relativeId / totalInDomain) * 100}%` }}></div>
-      </div>
+      {/* ADAPTIVE PROGRESS BAR */}
+      <AdaptiveProgressBar 
+        clarity={adaptiveState.clarity} 
+        isAdaptive={isAdaptive} 
+        contradictionsCount={adaptiveState.contradictions.length} 
+      />
 
-      {/* SYSTEM LOG MESSAGE (OCCASIONAL) */}
-      {showComment && (
+      {/* CALIBRATION MODE VISUAL */}
+      {isCalibration && (
+        <div className="bg-slate-900 p-6 rounded-[2rem] border border-indigo-500/30 space-y-3 relative overflow-hidden group">
+            <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full animate-pulse flex items-center justify-center">
+                    <div className="w-[200%] h-[1px] bg-indigo-400 rotate-45 transform translate-y-[-50%] animate-spin-slow"></div>
+                </div>
+            </div>
+            <div className="flex items-center gap-3 relative z-10">
+                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center animate-ping">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                </div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{t.global.calibrating}</h4>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium leading-relaxed relative z-10">
+                {t.global.calib_desc}
+            </p>
+        </div>
+      )}
+
+      {/* SYSTEM LOG MESSAGE */}
+      {showComment && !isCalibration && (
         <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50 animate-pulse flex items-center gap-3 shrink-0">
             <span className="text-lg">📡</span>
             <p className="text-[10px] font-mono font-black text-indigo-600 uppercase tracking-wider leading-tight">
@@ -64,7 +85,7 @@ export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene
             {getSceneText(scene.titleKey)}
         </h3>
         
-        <div className="bg-slate-950 p-6 rounded-[2rem] text-slate-100 font-medium border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+        <div className="bg-white p-6 rounded-[2rem] text-slate-600 font-medium border border-slate-100 shadow-xl relative overflow-hidden">
              <div className="absolute top-0 right-0 p-6 opacity-5 text-indigo-500 text-6xl font-black select-none pointer-events-none">?</div>
              <p className="relative z-10 text-lg leading-relaxed text-justify hyphens-auto">
                 {getSceneText(scene.descKey)}

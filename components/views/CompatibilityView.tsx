@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { AnalysisResult, Translations, SessionStep } from '../types';
-import { CompatibilityEngine } from '../services/compatibilityEngine';
-import { generateClinicalNarrative } from '../services/clinicalNarratives';
-import { ClinicalDecoder } from '../services/clinicalDecoder';
+import { AnalysisResult, Translations, SessionStep } from '../../types';
+import { CompatibilityEngine } from '../../services/compatibilityEngine';
+import { generateClinicalNarrative } from '../../services/clinicalNarratives';
+import { ClinicalDecoder } from '../../services/clinicalDecoder';
 
 interface CompatibilityViewProps {
   userResult: AnalysisResult | null;
@@ -193,8 +193,8 @@ export const CompatibilityView: React.FC<CompatibilityViewProps> = ({ userResult
                 ← {t.global.back}
             </button>
             <div className="flex flex-col items-end">
-                 <span className="text-[10px] font-mono text-indigo-600 font-black tracking-widest">CLINICAL_TERMINAL</span>
-                 <span className="text-[7px] font-mono text-slate-400 uppercase">Supervisor OS v5.2</span>
+                 <span className="text-[10px] font-mono text-indigo-600 font-black tracking-widest">HYPOTHESIS_NAVIGATOR</span>
+                 <span className="text-[7px] font-mono text-slate-400 uppercase">Analytical Engine v5.2</span>
             </div>
         </div>
 
@@ -285,20 +285,20 @@ export const CompatibilityView: React.FC<CompatibilityViewProps> = ({ userResult
                     <SessionArc steps={interpretation.narrative.sessionFlow} />
                 </div>
 
-                {/* 4. SUPERVISION DOSSIER */}
+                {/* 4. ANALYTICAL LAYER */}
                 <div className="space-y-3">
-                    <h4 className="text-[9px] font-black uppercase text-slate-600 tracking-[0.2em] pl-1">SUPERVISION_LAYER</h4>
+                    <h4 className="text-[9px] font-black uppercase text-slate-600 tracking-[0.2em] pl-1">ANALYTICAL_LAYER</h4>
                     
                     <div className="grid grid-cols-1 gap-3">
-                        <SupervisionCard title="RESISTANCE" type="alert">
+                        <SupervisionCard title="RESISTANCE HYPOTHESIS" type="alert">
                             <p className="text-[10px] text-slate-300 leading-relaxed">{interpretation.narrative.resistanceProfile}</p>
                         </SupervisionCard>
 
-                        <SupervisionCard title="ALLIANCE" type="info">
+                        <SupervisionCard title="ALLIANCE STRATEGY" type="info">
                             <p className="text-[10px] text-indigo-200 leading-relaxed">{interpretation.narrative.therapeuticAlliance}</p>
                         </SupervisionCard>
 
-                        <SupervisionCard title="CONTRACT" type="secret">
+                        <SupervisionCard title="SHADOW HYPOTHESIS" type="secret">
                             <p className="text-[10px] text-slate-300 italic leading-relaxed">"{interpretation.narrative.shadowContract}"</p>
                         </SupervisionCard>
                     </div>

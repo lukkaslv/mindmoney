@@ -1,14 +1,6 @@
 
-import { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef } from 'react';
 import { translations } from './translations.ts';
-
-declare global {
-  interface Window {
-    Telegram: {
-      WebApp: any;
-    };
-  }
-}
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -39,6 +31,7 @@ export const Layout = memo<LayoutProps>(({
   onLangChange, 
   soundEnabled, 
   onSoundToggle,
+  onLogout,
   onReset
 }) => {
   const t = translations[lang];

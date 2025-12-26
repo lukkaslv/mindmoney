@@ -16,7 +16,7 @@ export const AdaptiveQuestionEngine = {
       if (numericId < 3) return; // Ignore calibration nodes
 
       // 1. Latency Mask (Cognitive Dissonance)
-      if (h.latency > userBaseline * 2.8 && POSITIVE_BELIEFS.includes(h.beliefKey)) {
+      if (h.latency > userBaseline * 2.8 && POSITIVE_BELIEFS.includes(h.beliefKey as BeliefKey)) {
         contradictions.push({
           type: 'latency_mask',
           nodeId: h.nodeId,
@@ -27,7 +27,7 @@ export const AdaptiveQuestionEngine = {
       }
 
       // 2. Somatic Clash (Body-Mind Mismatch)
-      if ((h.sensation === 's1' || h.sensation === 's4') && POSITIVE_BELIEFS.includes(h.beliefKey)) {
+      if ((h.sensation === 's1' || h.sensation === 's4') && POSITIVE_BELIEFS.includes(h.beliefKey as BeliefKey)) {
         contradictions.push({
           type: 'somatic_clash',
           nodeId: h.nodeId,
@@ -49,22 +49,35 @@ export const AdaptiveQuestionEngine = {
         if (!completedIds.includes(i)) return i.toString();
     }
     
-    // Probing logic: If tension found in a domain, prioritize that domain's remaining nodes
-    const problematicDomain = contradictions.length > 0 
-      ? history.find(h => h.nodeId === contradictions[contradictions.length - 1].nodeId)?.domain 
-      : null;
+    // DYNAMIC PROBING: Scan ALL domains for highest tension
+    let domainTension: Record<DomainType, number> = { foundation: 0, agency: 0, money: 0, social: 0, legacy: 0 };
+    
+    // Calculate tension based on contradictions per domain
+    contradictions.forEach(c => {
+        const item = history.find(h => h.nodeId === c.nodeId);
+        if (item) domainTension[item.domain]++;
+    });
 
-    if (problematicDomain) {
-      const domainCfg = DOMAIN_SETTINGS.find(d => d.key === problematicDomain);
-      if (domainCfg) {
-        for (let i = 0; i < domainCfg.count; i++) {
-          const id = (domainCfg.startId + i);
-          if (!completedIds.includes(id)) return id.toString();
+    // Find the domain with maximum tension that still has remaining nodes
+    const sortedDomains = Object.entries(domainTension)
+        .sort((a, b) => b[1] - a[1]) // Descending tension
+        .map(([key]) => key as DomainType);
+
+    for (const domainKey of sortedDomains) {
+        const domainCfg = DOMAIN_SETTINGS.find(d => d.key === domainKey);
+        if (domainCfg) {
+             // Check if this domain has remaining nodes
+             for (let i = 0; i < domainCfg.count; i++) {
+                const id = (domainCfg.startId + i);
+                if (!completedIds.includes(id)) {
+                    // console.log(`Adaptive Engine: Probing ${domainKey} due to tension score ${domainTension[domainKey]}`);
+                    return id.toString();
+                }
+             }
         }
-      }
     }
 
-    // Default linear crawl (skipping calibration which is already checked)
+    // Default linear crawl if no specific tension found or high-tension domains are full
     for (let i = 3; i < TOTAL_NODES; i++) {
         if (!completedIds.includes(i)) return i.toString();
     }

@@ -19,7 +19,7 @@ interface DashboardViewProps {
   currentDomain: DomainType | null;
   nodes: NodeUI[];
   completedNodeIds: number[];
-  onSetView: (view: 'results' | 'auth') => void;
+  onSetView: (view: 'results' | 'auth' | 'compatibility' | 'guide') => void;
   onSetCurrentDomain: (domain: DomainType | null) => void;
   onStartNode: (id: number, domain: DomainType) => void;
   onLogout: () => void;
@@ -46,18 +46,36 @@ export const DashboardView = memo<DashboardViewProps>(({
     DOMAIN_SETTINGS.filter(d => nodes.filter(n => n.domain === d.key && n.done).length === d.count).length
   , [nodes]);
 
+  // Strategic Alignment: Retest check
+  const needsRetest = useMemo(() => {
+      if (!scanHistory || scanHistory.scans.length === 0) return false;
+      // In a real app, we check dates. Here we check the persistenceCounter delta for simulation
+      const latest = scanHistory.scans[scanHistory.scans.length - 1];
+      return latest.createdAt ? (Date.now() - latest.createdAt > 7 * 24 * 60 * 60 * 1000) : false;
+  }, [scanHistory]);
+
   return (
     <div className="space-y-6 animate-in flex flex-col h-full">
       <header className="space-y-3 shrink-0">
-        <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                Status <span className="text-indigo-600">Report</span>
+        <div className="flex justify-between items-center px-1">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2 italic">
+                STATUS <span className="text-indigo-600">REPORT</span>
             </h2>
             <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
                 <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-tighter">Live Uplink</span>
             </div>
         </div>
+        
+        {needsRetest && (
+            <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-[1.5rem] space-y-1 shadow-lg shadow-amber-200/20 animate-pulse">
+                <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-2">
+                    <span>⚠️</span> {t.dashboard.retest_ready}
+                </h4>
+                <p className="text-[11px] font-bold text-amber-900 italic leading-tight">{t.dashboard.retest_desc}</p>
+            </div>
+        )}
+
         <div className={`p-4 rounded-2xl border transition-all duration-500 ${result && result.entropyScore > 60 ? 'bg-red-50 border-red-100 shadow-red-100/50' : 'bg-indigo-50/50 border-indigo-100/30'}`}>
            <p className={`text-[11px] font-bold italic leading-relaxed ${result && result.entropyScore > 60 ? 'text-red-700' : 'text-indigo-700'}`}>
               {humanInsight}
@@ -66,9 +84,7 @@ export const DashboardView = memo<DashboardViewProps>(({
       </header>
 
       {/* EVOLUTION DASHBOARD (Longitudinal) */}
-      {scanHistory && scanHistory.scans.length > 1 && (
-        <EvolutionDashboard history={scanHistory} />
-      )}
+      <EvolutionDashboard history={scanHistory} />
 
       {/* CORE METRICS CARD */}
       <section 
@@ -108,6 +124,25 @@ export const DashboardView = memo<DashboardViewProps>(({
             ))}
          </div>
       </section>
+
+      {/* SYSTEM ACCESS: TERMINAL & GUIDE BUTTONS */}
+      <div className="grid grid-cols-2 gap-3 px-1">
+          <button 
+            onClick={() => onSetView('compatibility')} 
+            className="py-4 bg-slate-900 rounded-2xl flex flex-col items-center justify-center px-4 active:scale-95 transition-all shadow-lg border border-slate-800"
+          >
+             <span className="text-xl mb-1">📟</span>
+             <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">{t.dashboard.open_terminal}</span>
+          </button>
+
+          <button 
+            onClick={() => onSetView('guide')} 
+            className="py-4 bg-white rounded-2xl flex flex-col items-center justify-center px-4 active:scale-95 transition-all shadow-md border border-slate-200 group"
+          >
+             <span className="text-xl mb-1 group-hover:scale-110 transition-transform">🧭</span>
+             <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{t.dashboard.manual_btn}</span>
+          </button>
+      </div>
 
       {!currentDomain ? (
         <div className="space-y-3 flex-1">

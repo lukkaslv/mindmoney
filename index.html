@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
   <head>
@@ -35,26 +34,17 @@
       [lang="ka"] {
         line-height: 1.8 !important;
         letter-spacing: 0.01em !important;
-        font-family: 'Inter', "FiraGO", "BPG Nino Mtavruli", sans-serif !important;
       }
 
-      /* Soften Georgian Headers: Mkhedruli script looks cluttered with ultra-bold weights */
       [lang="ka"] h1, [lang="ka"] h2, [lang="ka"] h3 {
-        font-weight: 700 !important; /* Bold instead of Black */
+        font-weight: 700 !important; 
         letter-spacing: 0.02em !important;
         line-height: 1.4 !important;
       }
 
-      [lang="ka"] h4, [lang="ka"] h5, [lang="ka"] p {
+      [lang="ka"] p, [lang="ka"] button {
         font-weight: 500 !important;
-        line-height: 1.7 !important;
-      }
-
-      /* Specific button adjustments for Georgian - avoid text overflow */
-      [lang="ka"] button {
-        letter-spacing: 0.03em !important;
-        font-weight: 600 !important;
-        font-size: 0.95em !important;
+        font-size: 0.94em !important;
       }
 
       /* Noise Overlay */
@@ -68,7 +58,7 @@
         opacity: 0.4;
       }
 
-      #root { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+      #root { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 
       .glass-card {
         background: rgba(255, 255, 255, 0.82);
@@ -97,6 +87,25 @@
       
       button, .card-interactive {
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .origin-label {
+        font-size: 7px;
+        letter-spacing: 0.15em;
+        font-weight: 900;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      @keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+      }
+      .animate-shake {
+        animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
       }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

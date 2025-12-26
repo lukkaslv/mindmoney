@@ -47,6 +47,7 @@ export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene
         clarity={adaptiveState.clarity} 
         isAdaptive={isAdaptive} 
         contradictionsCount={adaptiveState.contradictions.length} 
+        confidenceScore={adaptiveState.confidenceScore}
       />
 
       {/* CALIBRATION MODE VISUAL */}
@@ -102,6 +103,13 @@ export const TestView = memo<TestViewProps>(({ t, activeModule, currentId, scene
             <span className="opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity">➜</span>
           </button>
         ))}
+        <button 
+            // FIX: Added missing 'position' property to the Choice object for skipped questions.
+            onClick={() => onChoice({ id: `${currentId}_skip`, textKey: '', beliefKey: 'default', position: -1 })}
+            className="w-full p-4 text-center bg-slate-100 border border-slate-200 rounded-[1.5rem] shadow-sm font-bold text-xs uppercase text-slate-500 active:scale-[0.98] transition-all hover:border-slate-300"
+        >
+            Не уверен / Пропустить
+        </button>
       </div>
     </div>
   );
@@ -142,6 +150,15 @@ export const BodySyncView = memo<BodySyncViewProps>(({ t, onSync }) => {
         <div className="space-y-4 max-w-xs mx-auto relative z-10">
            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-500 border-b border-indigo-100 pb-2 inline-block">{t.sync.title}</h3>
            <p className="text-xl font-bold text-slate-800 leading-tight">{t.sync.desc}</p>
+        </div>
+
+        {/* Clinical Guidance Tip */}
+        <div className="relative z-10 px-4">
+             <div className="bg-indigo-50/80 p-3 rounded-xl border border-indigo-100/50 text-center">
+                 <p className="text-[9px] text-indigo-800 leading-tight font-medium">
+                    {t.sync.guidance_tip}
+                 </p>
+             </div>
         </div>
         
         <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto relative z-10">

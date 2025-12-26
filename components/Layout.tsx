@@ -2,14 +2,6 @@
 import React, { memo, useEffect, useRef } from 'react';
 import { translations } from '../translations.ts';
 
-declare global {
-  interface Window {
-    Telegram: {
-      WebApp: any;
-    };
-  }
-}
-
 interface LayoutProps {
   children: React.ReactNode;
   lang: 'ru' | 'ka';
@@ -21,7 +13,7 @@ interface LayoutProps {
 }
 
 /**
- * Seeded PRNG for Deterministic Noise Generation
+ * Deterministic Pseudo-Random Generator (LCG)
  * Genesis OS v3.0 Constitution requirement: NO Math.random() in production flow.
  */
 const seededRandom = (seed: number) => {
@@ -45,6 +37,14 @@ export const Layout = memo<LayoutProps>(({
   const t = translations[lang];
   const audioCtxRef = useRef<AudioContext | null>(null);
   const noiseNodeRef = useRef<AudioNode | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Auto-scroll to top when view (children) changes
+  useEffect(() => {
+    if (mainRef.current) {
+        mainRef.current.scrollTop = 0;
+    }
+  }, [children]);
 
   useEffect(() => {
     if (soundEnabled) {
@@ -139,7 +139,7 @@ export const Layout = memo<LayoutProps>(({
         </div>
       </header>
       
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
         <div className="px-5 py-6 pb-24">
           {children}
         </div>

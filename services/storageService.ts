@@ -1,18 +1,19 @@
+import { AnalysisResult, ScanHistory, DataCorruptionError } from '../types';
 
-import { AnalysisResult, ScanHistory } from '../types';
+export interface SessionState {
+  nodes: number[];
+  history: any[]; // Using 'any' to avoid circular dependency issues, should be GameHistoryItem
+}
 
 export const STORAGE_KEYS = {
   LANG: 'app_lang',
   SESSION: 'session_auth',
-  NODES: 'genesis_completed_nodes',
-  HISTORY: 'genesis_history',
+  SESSION_STATE: 'genesis_session_state', // Replaces NODES and HISTORY
   VERSION: 'genesis_version',
   ROADMAP_STATE: 'genesis_roadmap_completed',
-  SCAN_HISTORY: 'genesis_scan_history'
+  SCAN_HISTORY: 'genesis_scan_history',
+  AUDIT_LOG: 'genesis_audit_log'
 } as const;
-
-// Deterministic Pseudo-Counter for ID-based persistence without Date.now()
-let persistenceCounter = 0;
 
 // In-Memory Fallback for sandbox environments (artifacts)
 const memoryStore: Record<string, string> = {};
@@ -28,12 +29,44 @@ const getStorageProvider = () => {
     return {
       getItem: (key: string) => memoryStore[key] || null,
       setItem: (key: string, val: string) => { memoryStore[key] = val; },
-      removeItem: (key: string) => { delete memoryStore[key]; }
+      removeItem: (key: string) => { delete memoryStore[key]; },
+      getAllKeys: () => Object.keys(memoryStore),
+      clear: () => { 
+          for (const key in memoryStore) {
+              delete memoryStore[key];
+          }
+      }
     };
   }
 };
 
 const provider = getStorageProvider();
+
+// Helper to safely parse history
+const loadHistory = (): ScanHistory => {
+  const item = provider.getItem(STORAGE_KEYS.SCAN_HISTORY);
+  if (!item) return { 
+    scans: [], 
+    latestScan: null, 
+    evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
+  };
+  try {
+    return JSON.parse(item) as ScanHistory;
+  } catch (e) {
+    // Unlike session state, scan history can be reset without losing current progress.
+    return { 
+      scans: [], 
+      latestScan: null, 
+      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
+    };
+  }
+};
+
+// Initialize counter based on existing data to enforce determinism across reloads
+const initialHistory = loadHistory();
+let persistenceCounter = initialHistory.scans.length > 0 
+  ? initialHistory.scans.length 
+  : 0;
 
 export const StorageService = {
   save: (key: string, data: unknown) => {
@@ -45,26 +78,27 @@ export const StorageService = {
   },
   
   load: <T,>(key: string, fallback: T): T => {
+    const item = provider.getItem(key);
+    if (!item) return fallback;
     try {
-      const item = provider.getItem(key);
-      if (!item) return fallback;
       return JSON.parse(item) as T;
     } catch (e) {
-      console.warn(`Data Corruption at ${key}. Reverting to baseline.`);
-      return fallback;
+      console.error(`CRITICAL: Data Corruption at key ${key}.`, e);
+      throw new DataCorruptionError(`Failed to parse data for key: ${key}`);
     }
   },
 
   async saveScan(result: AnalysisResult): Promise<void> {
-    const history = StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { 
-      scans: [], 
-      latestScan: null, 
-      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
-    });
+    const history = loadHistory();
     
     // Deterministic progression marker instead of Date.now()
     persistenceCounter++;
-    const deterministicResult = { ...result, createdAt: persistenceCounter };
+    // This service is the single source of truth for timestamps.
+    const deterministicResult: AnalysisResult = { 
+        ...result, 
+        createdAt: persistenceCounter,
+        timestamp: Date.now() // The real-world timestamp is applied here.
+    };
     
     history.scans.push(deterministicResult);
     history.latestScan = deterministicResult;
@@ -76,19 +110,38 @@ export const StorageService = {
   },
 
   getScanHistory(): ScanHistory {
-    return StorageService.load<ScanHistory>(STORAGE_KEYS.SCAN_HISTORY, { 
-      scans: [], 
-      latestScan: null, 
-      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
-    });
+    return loadHistory();
   },
   
+  logAuditEvent: (action: string, details?: Record<string, any>) => {
+    try {
+        const logs = StorageService.load<any[]>(STORAGE_KEYS.AUDIT_LOG, []);
+        const newLog = {
+            timestamp: new Date().toISOString(),
+            action,
+            details: details || {}
+        };
+        logs.unshift(newLog); // Add to the beginning
+        // Keep only the last 50 log entries
+        if (logs.length > 50) {
+            logs.length = 50;
+        }
+        StorageService.save(STORAGE_KEYS.AUDIT_LOG, logs);
+    } catch (e) {
+        console.error("Failed to write to audit log:", e);
+    }
+  },
+
   clear: () => {
+    // CRITICAL: Preserve audit log and language settings during a wipe.
+    const preservedKeys: string[] = [STORAGE_KEYS.LANG, STORAGE_KEYS.AUDIT_LOG];
+    
     Object.values(STORAGE_KEYS).forEach(key => {
-      if (key !== STORAGE_KEYS.LANG) {
+      if (!preservedKeys.includes(key)) {
         provider.removeItem(key);
       }
     });
     persistenceCounter = 0;
+    StorageService.logAuditEvent("SESSION_WIPE_EXECUTED");
   }
 };

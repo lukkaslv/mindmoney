@@ -1,41 +1,7 @@
 
-import { BeliefKey, ProtocolStep, GameHistoryItem, PhaseType, AnalysisResult, TaskKey, ArchetypeKey, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel } from '../types';
-import { DOMAIN_SETTINGS } from '../constants';
-import { CompatibilityEngine } from './compatibilityEngine';
+import { BeliefKey, GameHistoryItem, RawAnalysisResult, NeuralCorrelation, DomainType, IntegrityBreakdown, SystemConflict, MetricLevel, ClinicalWarning, AnalysisFlags, PhaseType } from '../types';
 
-const TASKS_LOGIC: Record<PhaseType, Array<{ taskKey: TaskKey, targetMetricKey: string }>> = {
-  SANITATION: [
-    { taskKey: "sanitation_1", targetMetricKey: "Focus +10%" },
-    { taskKey: "sanitation_2", targetMetricKey: "Sync +15%" },
-    { taskKey: "sanitation_3", targetMetricKey: "Space +15%" },
-    { taskKey: "sanitation_4", targetMetricKey: "Clarity +20%" },
-    { taskKey: "sanitation_5", targetMetricKey: "Control +10%" },
-    { taskKey: "sanitation_6", targetMetricKey: "Awareness +12%" },
-    { taskKey: "sanitation_7", targetMetricKey: "Space +25%" }
-  ],
-  STABILIZATION: [
-    { taskKey: "stabilization_1", targetMetricKey: "Agency +12%" },
-    { taskKey: "stabilization_2", targetMetricKey: "Foundation +15%" },
-    { taskKey: "stabilization_3", targetMetricKey: "Will +10%" },
-    { taskKey: "stabilization_4", targetMetricKey: "Stability +15%" },
-    { taskKey: "stabilization_5", targetMetricKey: "Focus +12%" },
-    { taskKey: "stabilization_6", targetMetricKey: "Agency +15%" },
-    { taskKey: "stabilization_7", targetMetricKey: "Integrity +15%" }
-  ],
-  EXPANSION: [
-    { taskKey: "expansion_1", targetMetricKey: "Courage +20%" },
-    { taskKey: "expansion_2", targetMetricKey: "Resource +15%" },
-    { taskKey: "expansion_3", targetMetricKey: "Agency +20%" },
-    { taskKey: "expansion_4", targetMetricKey: "Visibility +25%" },
-    { taskKey: "expansion_5", targetMetricKey: "Scale +30%" },
-    { taskKey: "expansion_6", targetMetricKey: "Vision +20%" },
-    { taskKey: "expansion_7", targetMetricKey: "Integrity +25%" }
-  ]
-};
-
-interface Vector4 { f: number; a: number; r: number; e: number }
-
-const WEIGHTS: Record<BeliefKey, Vector4> = {
+const WEIGHTS: Record<BeliefKey, { f: number; a: number; r: number; e: number }> = {
   'scarcity_mindset':     { f: -4, a: -2, r: -3, e: 4 },
   'fear_of_punishment':   { f: -3, a: -3, r: -2, e: 4 },
   'money_is_tool':        { f: 2, a: 4, r: 5, e: -2 },
@@ -59,17 +25,8 @@ const WEIGHTS: Record<BeliefKey, Vector4> = {
   'ambivalence_loop':     { f: -2, a: -5, r: 0, e: 10 },
   'hero_martyr':          { f: 0, a: 0, r: 0, e: 5 },
   'autopilot_mode':       { f: 0, a: -5, r: 0, e: 5 },
-  'golden_cage':          { f: 0, a: -5, r: 0, e: 5 }
-};
-
-const PATTERN_FIX_TASKS: Partial<Record<BeliefKey, TaskKey>> = {
-    'family_loyalty': 'pattern_fix_family',
-    'shame_of_success': 'pattern_fix_family',
-    'imposter_syndrome': 'pattern_fix_imposter',
-    'fear_of_punishment': 'pattern_fix_fear',
-    'unconscious_fear': 'pattern_fix_fear',
-    'boundary_collapse': 'pattern_fix_boundary',
-    'fear_of_conflict': 'pattern_fix_boundary'
+  'golden_cage':          { f: 0, a: -5, r: 0, e: 5 },
+  'default':              { f: 0, a: 0, r: 0, e: 0 } // Neutral for skipped questions
 };
 
 function updateMetric(current: number, delta: number): number {
@@ -79,64 +36,149 @@ function updateMetric(current: number, delta: number): number {
     return Math.max(0, Math.min(100, current + effectiveDelta));
 }
 
-export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult {
+// --- CLINICAL DETECTORS ---
+
+const median = (arr: number[]): number => {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+};
+
+function detectAlexithymia(history: GameHistoryItem[]): boolean {
+  const somaticItems = history.filter(h => parseInt(h.nodeId) >= 3 && h.sensation !== 's0');
+  if (history.length < 15) return false;
+  return (somaticItems.length / history.length) < 0.15;
+}
+
+function calculateAdaptiveThresholds(latencies: number[]): { slow: number; median: number } {
+    if (latencies.length < 5) return { slow: 5000, median: 2000 };
+    const sorted = [...latencies].sort((a, b) => a - b);
+    const medianVal = median(sorted);
+    // A more aggressive threshold that adapts to user speed
+    const slowThreshold = Math.max(3500, medianVal * 2.2); 
+    return { slow: slowThreshold, median: medianVal };
+}
+
+function detectSlowBaseline(history: GameHistoryItem[]): { isDetected: boolean; factor: number } {
+  if (history.length < 5) return { isDetected: false, factor: 1.0 };
+  const calibrationItems = history.slice(0, 5);
+  const medianVal = median(calibrationItems.map(h => h.latency));
+  if (medianVal > 5000) return { isDetected: true, factor: 0.7 };
+  return { isDetected: false, factor: 1.0 };
+}
+
+function detectSocialDesirabilityBias(history: GameHistoryItem[]): boolean {
+  let rapidStreak = 0;
+  const testItems = history.filter(h => parseInt(h.nodeId) >= 3);
+  for (const item of testItems) {
+    if (item.latency < 500) {
+      rapidStreak++;
+      if (rapidStreak >= 5) return true;
+    } else {
+      rapidStreak = 0;
+    }
+  }
+  return false;
+}
+
+export function calculateRawMetrics(history: GameHistoryItem[]): RawAnalysisResult {
   let f = 50, a = 50, r = 50, e = 10;
   let syncScore = 100;
+  let skippedCount = 0;
   const activePatterns: BeliefKey[] = [];
   const correlations: NeuralCorrelation[] = [];
   const conflicts: SystemConflict[] = [];
+  const somaticDissonance: BeliefKey[] = [];
   const somaticProfile = { blocks: 0, resources: 0, dominantSensation: 's0' };
   const sensationsFreq: Record<string, number> = {};
-
-  const latencies = history.map(h => h.latency).filter(l => l > 400 && l < 15000);
-  const userBaseline = latencies.slice(0, 5).reduce((sum, l) => sum + l, 0) / Math.max(1, Math.min(5, latencies.length)) || 2000;
+  const warnings: ClinicalWarning[] = [];
   
-  // Advanced Signal Analysis: Using Median for Robustness
-  const sortedLatencies = [...latencies].sort((x, y) => x - y);
-  const medianLatency = sortedLatencies[Math.floor(sortedLatencies.length / 2)] || userBaseline;
-  
-  const latencyVariance = latencies.length > 1 
-    ? Math.sqrt(latencies.reduce((sum, l) => sum + Math.pow(l - medianLatency, 2), 0) / latencies.length) 
-    : 0;
+  let validLatencies: number[] = [];
 
-  // Confidence Score: High variance relative to median decreases signal trust
-  const confidenceScore = Math.max(0, 100 - (latencyVariance / medianLatency * 110));
+  const isAlexithymia = detectAlexithymia(history);
+  const slowBaseline = detectSlowBaseline(history);
+  const isSocialBias = detectSocialDesirabilityBias(history);
+  
+  const entropyCompFactor = slowBaseline.factor;
+
+  if (isAlexithymia) {
+      warnings.push({ type: 'SOMATIC_BLINDNESS', severity: 'HIGH', messageKey: 'somatic_detection_warning' });
+  }
+  if (slowBaseline.isDetected) {
+      warnings.push({ type: 'PROCESSING_SPEED_NOTE', severity: 'LOW', messageKey: 'slow_processing_detected' });
+  }
+
+  let validity: 'VALID' | 'SUSPICIOUS' | 'INVALID' = 'VALID';
+  if (isSocialBias) validity = 'SUSPICIOUS';
+  
+  // HARDENING: Use a sliding window for baseline calculation to prevent start-game manipulation.
+  let slidingLatencyWindow: number[] = [];
 
   history.forEach((h, index) => {
-    if (parseInt(h.nodeId) < 5) return;
+    if (h.latency > 300 && h.latency < 30000) {
+        slidingLatencyWindow.push(h.latency);
+        if (slidingLatencyWindow.length > 7) slidingLatencyWindow.shift();
+    }
+    const { slow: adaptiveSlowThreshold, median: medianBaseline } = calculateAdaptiveThresholds(slidingLatencyWindow);
+    
+    if (h.beliefKey === 'default') {
+        skippedCount++;
+        return;
+    }
+    
+    if (parseInt(h.nodeId) < 3) return; 
 
     const beliefKey = h.beliefKey as BeliefKey;
     let w = WEIGHTS[beliefKey] || { f: 0, a: 0, r: 0, e: 1 };
     
-    const latencyRatio = h.latency / userBaseline;
-    const latencyFactor = latencyRatio > 2.2 ? 1.6 : latencyRatio < 0.5 ? 0.6 : 1.0;
-    
+    const latencyRatio = h.latency / medianBaseline;
+    const latencyFactor = latencyRatio > 2.5 ? 2.0 : latencyRatio < 0.4 ? 0.5 : 1.0;
     const resonance = 1 + (history.slice(0, index).filter(item => item.beliefKey === h.beliefKey).length * 0.2);
     
     f = updateMetric(f, w.f * resonance);
     a = updateMetric(a, w.a * resonance);
     r = updateMetric(r, w.r * resonance);
-    e = updateMetric(e, w.e * resonance * latencyFactor);
+    e = updateMetric(e, w.e * resonance * latencyFactor * entropyCompFactor);
     
     if (h.sensation === 's1' || h.sensation === 's4') somaticProfile.blocks++;
     if (h.sensation === 's2') somaticProfile.resources++;
     sensationsFreq[h.sensation] = (sensationsFreq[h.sensation] || 0) + 1;
 
-    const nodeId = h.nodeId;
-    const domain = h.domain;
-
-    if (h.latency > userBaseline * 2.5) {
-        correlations.push({ nodeId, domain: domain as DomainType, type: 'resistance', descriptionKey: `correlation_resistance_${beliefKey}` });
-        e = updateMetric(e, 7); 
+    if (h.latency > adaptiveSlowThreshold) {
+        correlations.push({ nodeId: h.nodeId, domain: h.domain, type: 'resistance', descriptionKey: `correlation_resistance_${beliefKey}` });
+        e = updateMetric(e, 8 * entropyCompFactor); 
     }
     
-    if (h.sensation === 's2' && h.latency < userBaseline * 1.2) {
-        correlations.push({ nodeId, domain: domain as DomainType, type: 'resonance', descriptionKey: `correlation_resonance_${beliefKey}` });
+    if (h.sensation === 's2' && h.latency < medianBaseline * 1.2) {
+        correlations.push({ nodeId: h.nodeId, domain: h.domain, type: 'resonance', descriptionKey: `correlation_resonance_${beliefKey}` });
     }
 
-    if (w.a > 2 && (h.sensation === 's1' || h.sensation === 's4')) syncScore -= 6;
+    // SOMATIC HARDENING: Bidirectional check for contradictions.
+    const isPositiveBelief = w.a > 2 || w.f > 1 || w.r > 2;
+    const isNegativeBelief = w.f < -1 || w.e > 3 || w.a < -2;
+
+    if (isPositiveBelief && (h.sensation === 's1' || h.sensation === 's4')) {
+        syncScore -= 12; // Penalty for mind saying 'yes' but body saying 'no'.
+        if (!somaticDissonance.includes(beliefKey)) somaticDissonance.push(beliefKey);
+    }
+    if (isNegativeBelief && h.sensation === 's2') {
+        syncScore -= 15; // Higher penalty for faking positive resonance on a negative topic.
+        if (!somaticDissonance.includes(beliefKey)) somaticDissonance.push(beliefKey);
+    }
+    
     if (history.filter(item => item.beliefKey === h.beliefKey).length > 2) activePatterns.push(beliefKey);
+    validLatencies.push(h.latency);
   });
+
+  const { median: finalMedianBaseline } = calculateAdaptiveThresholds(validLatencies);
+  
+  const latencyVariance = validLatencies.length > 1 
+    ? Math.sqrt(validLatencies.reduce((sum, l) => sum + Math.pow(l - finalMedianBaseline, 2), 0) / validLatencies.length) 
+    : 0;
+
+  // REFACTOR: Somatic monotony is now handled by PatternDetector. This focuses on latency variance.
+  const confidenceScore = Math.max(0, 100 - (latencyVariance / finalMedianBaseline * 100));
 
   if (a > 75 && f < 35) conflicts.push({ key: 'icarus', severity: 'high', domain: 'agency' });
   if (r > 70 && e > 55) conflicts.push({ key: 'leaky_bucket', severity: 'medium', domain: 'money' });
@@ -144,65 +186,40 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
 
   somaticProfile.dominantSensation = Object.entries(sensationsFreq).sort((a, b) => b[1] - a[1])[0]?.[0] || 's0';
 
-  const integrityBase = Math.round(((f + a + r) / 3) * (1 - (e / 130)));
-  const systemHealth = Math.round((integrityBase * 0.55) + (syncScore * 0.45));
-  const coherence = Math.max(0, 100 - (latencyVariance / medianLatency * 70));
-  const stability = Math.round((f * 0.65) + (a * 0.35));
+  const integrityBase = Math.round(((f + a + r) / 3) * (1 - (e / 150)));
+  const systemHealth = Math.round((integrityBase * 0.6) + (syncScore * 0.4));
+  const stability = Math.round((f * 0.7) + (a * 0.3));
   
-  const status: MetricLevel = systemHealth > 80 ? 'OPTIMAL' : systemHealth > 50 ? 'STABLE' : systemHealth > 30 ? 'STRAINED' : 'DISRUPTED';
+  const status: MetricLevel = systemHealth > 82 ? 'OPTIMAL' : systemHealth > 52 ? 'STABLE' : systemHealth > 32 ? 'STRAINED' : 'PROTECTIVE';
 
   const integrityBreakdown: IntegrityBreakdown = {
-    coherence: Math.round(coherence),
+    coherence: Math.round(confidenceScore),
     sync: Math.round(syncScore),
-    stability: Math.round(stability),
+    stability,
     label: systemHealth > 80 ? 'HIGH_COHERENCE' : systemHealth > 50 ? 'COMPENSATED' : 'STRUCTURAL_NOISE',
     description: systemHealth > 80 ? 'audit_desc_high' : systemHealth > 50 ? 'audit_desc_mid' : 'audit_desc_low',
     status
   };
-
-  const archetypeSpectrum: {key: ArchetypeKey, score: number}[] = ([
-    { key: 'THE_CHAOS_SURFER', score: e },
-    { key: 'THE_DRIFTER', score: 100 - a },
-    { key: 'THE_BURNED_HERO', score: (a + (100 - r)) / 2 },
-    { key: 'THE_GOLDEN_PRISONER', score: (r + (100 - a)) / 2 },
-    { key: 'THE_GUARDIAN', score: (f + (100 - a)) / 2 },
-    { key: 'THE_ARCHITECT', score: (a + f + r) / 3 }
-  ] as { key: ArchetypeKey; score: number }[]).sort((a, b) => b.score - a.score);
-
-  const primary = archetypeSpectrum[0];
-  const secondary = archetypeSpectrum[1];
-  const totalWeight = Math.max(1, primary.score + secondary.score);
-  const matchPercent = Math.round((primary.score / totalWeight) * 100);
-
-  // Safety Net: Force SANITATION if foundation is critical
+  
   let phase: PhaseType = systemHealth < 35 ? 'SANITATION' : systemHealth < 68 ? 'STABILIZATION' : 'EXPANSION';
-  if (f < 30) phase = 'SANITATION';
+  if (f < 32) phase = 'SANITATION';
 
-  const uniquePatterns = [...new Set(activePatterns)];
-  const pool = TASKS_LOGIC[phase];
-  const roadmap: ProtocolStep[] = Array.from({ length: 7 }, (_, i) => {
-    const day = i + 1;
-    if (day % 3 === 0 && uniquePatterns.length > 0) {
-        const pattern = uniquePatterns.shift()!;
-        const fixTask = PATTERN_FIX_TASKS[pattern];
-        if (fixTask) return { day, phase: 'SANITATION', taskKey: fixTask, targetMetricKey: "Recovery" };
-    }
-    const taskData = pool[i % pool.length];
-    return { day, phase, ...taskData };
-  });
+  let entropyType: AnalysisFlags['entropyType'] = 'NEUTRAL';
+  if (e > 40) {
+      if (a > 60 && f > 40) entropyType = 'CREATIVE';
+      else if (f < 40) entropyType = 'STRUCTURAL';
+  }
 
-  // Robust LifeScript Synthesis
-  let synthesizedLifeScript = "healthy_integration";
-  if (a > 75 && f < 35) synthesizedLifeScript = "high_agency_low_foundation";
-  else if (r > 70 && e > 50) synthesizedLifeScript = "high_resource_high_entropy";
-  else if (a < 40 && f > 70) synthesizedLifeScript = "low_agency_high_foundation";
-  else if (e > 55) synthesizedLifeScript = "high_volatility";
-  else if (syncScore < 45) synthesizedLifeScript = "somatic_dissonance";
+  const flags: AnalysisFlags = {
+      isAlexithymiaDetected: isAlexithymia,
+      isSlowProcessingDetected: slowBaseline.isDetected,
+      isNeuroSyncReliable: !isAlexithymia,
+      isSocialDesirabilityBiasDetected: isSocialBias,
+      processingSpeedCompensation: entropyCompFactor,
+      entropyType
+  };
 
-  const result: AnalysisResult = {
-    timestamp: Math.round(history.reduce((acc, h) => acc + h.latency, 0)), 
-    createdAt: Date.now(),
-    shareCode: '',
+  return {
     state: { foundation: f, agency: a, resource: r, entropy: e },
     integrity: integrityBase, 
     capacity: Math.round((f + r) / 2), 
@@ -210,28 +227,18 @@ export function calculateGenesisCore(history: GameHistoryItem[]): AnalysisResult
     neuroSync: Math.round(syncScore), 
     systemHealth, 
     phase,
-    archetypeKey: primary.key,
-    secondaryArchetypeKey: secondary.key,
-    archetypeMatch: matchPercent,
-    archetypeSpectrum,
-    verdictKey: a > 75 && f < 35 ? 'BRILLIANT_SABOTAGE' : f > 75 && a < 40 ? 'INVISIBILE_CEILING' : r > 70 && e > 55 ? 'LEAKY_BUCKET' : 'HEALTHY_SCALE',
-    lifeScriptKey: synthesizedLifeScript,
-    roadmap,
-    graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
-    status: systemHealth < 25 ? 'CRITICAL' : systemHealth < 55 ? 'UNSTABLE' : 'OPTIMAL',
+    status: f < 30 ? 'PROTECTIVE' : systemHealth < 55 ? 'UNSTABLE' : 'OPTIMAL',
+    validity, 
     activePatterns: [...new Set(activePatterns)],
-    correlations: correlations.slice(0, 5),
+    correlations: correlations.slice(0, 8),
     conflicts,
+    somaticDissonance: [...new Set(somaticDissonance)],
     somaticProfile,
     integrityBreakdown,
-    interventionStrategy: f < 40 ? 'stabilize_foundation' : e > 50 ? 'lower_entropy' : 'activate_will',
-    coreConflict: a > 75 && f < 40 ? 'icarus' : r > 70 && e > 55 ? 'leaky_bucket' : 'invisible_cage',
-    shadowDirective: activePatterns.includes('hero_martyr') ? 'self_sabotage_fix' : 'integrity_boost',
-    interferenceInsight: activePatterns.includes('family_loyalty') ? 'family_vs_money' : undefined,
-    clarity: Math.min(100, history.length * 2.5),
-    confidenceScore: Math.round(confidenceScore)
+    clarity: Math.min(100, history.length * 2),
+    confidenceScore: Math.round(confidenceScore),
+    warnings,
+    flags,
+    skippedCount
   };
-
-  result.shareCode = CompatibilityEngine.generateShareCode(result);
-  return result;
 }

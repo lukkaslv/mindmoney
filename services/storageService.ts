@@ -1,22 +1,16 @@
-import { AnalysisResult, ScanHistory, DataCorruptionError } from '../types';
+import { AnalysisResult, ScanHistory, DataCorruptionError, SystemLogEntry, TelemetryEvent, FeedbackEntry } from '../types';
+import { STORAGE_KEYS } from '../constants';
+import { SecurityCore } from '../utils/crypto';
+
+export { STORAGE_KEYS };
+
+// Session key derived from the environment/password (Internal use)
+const INTERNAL_KEY = "genesis_stable_v3";
 
 export interface SessionState {
   nodes: number[];
-  history: any[]; // Using 'any' to avoid circular dependency issues, should be GameHistoryItem
+  history: any[]; 
 }
-
-export const STORAGE_KEYS = {
-  LANG: 'app_lang',
-  SESSION: 'session_auth',
-  SESSION_STATE: 'genesis_session_state', // Replaces NODES and HISTORY
-  VERSION: 'genesis_version',
-  ROADMAP_STATE: 'genesis_roadmap_completed',
-  SCAN_HISTORY: 'genesis_scan_history',
-  AUDIT_LOG: 'genesis_audit_log'
-} as const;
-
-// In-Memory Fallback for sandbox environments (artifacts)
-const memoryStore: Record<string, string> = {};
 
 const getStorageProvider = () => {
   try {
@@ -25,123 +19,148 @@ const getStorageProvider = () => {
     window.localStorage.removeItem(testKey);
     return window.localStorage;
   } catch (e) {
-    console.warn('LocalStorage unavailable. Operating in RAM mode.');
-    return {
-      getItem: (key: string) => memoryStore[key] || null,
-      setItem: (key: string, val: string) => { memoryStore[key] = val; },
-      removeItem: (key: string) => { delete memoryStore[key]; },
-      getAllKeys: () => Object.keys(memoryStore),
-      clear: () => { 
-          for (const key in memoryStore) {
-              delete memoryStore[key];
-          }
-      }
-    };
+    return null; // Fallback handled in logic
   }
 };
 
 const provider = getStorageProvider();
 
-// Helper to safely parse history
 const loadHistory = (): ScanHistory => {
-  const item = provider.getItem(STORAGE_KEYS.SCAN_HISTORY);
-  if (!item) return { 
-    scans: [], 
-    latestScan: null, 
-    evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
-  };
+  const item = provider?.getItem(STORAGE_KEYS.SCAN_HISTORY);
+  if (!item) return { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } };
+  
+  // Try decrypting. If it fails, try parsing as raw JSON (migration support)
+  const decrypted = SecurityCore.safeDecode(item, INTERNAL_KEY);
+  if (decrypted) return decrypted;
+
   try {
-    return JSON.parse(item) as ScanHistory;
+    const raw = JSON.parse(item);
+    return raw;
   } catch (e) {
-    // Unlike session state, scan history can be reset without losing current progress.
-    return { 
-      scans: [], 
-      latestScan: null, 
-      evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } 
-    };
+    return { scans: [], latestScan: null, evolutionMetrics: { entropyTrend: [], integrityTrend: [], dates: [] } };
   }
 };
-
-// Initialize counter based on existing data to enforce determinism across reloads
-const initialHistory = loadHistory();
-let persistenceCounter = initialHistory.scans.length > 0 
-  ? initialHistory.scans.length 
-  : 0;
 
 export const StorageService = {
   save: (key: string, data: unknown) => {
     try {
-      provider.setItem(key, JSON.stringify(data));
+      // Encrypt sensitive diagnostic data
+      const isSensitive = [STORAGE_KEYS.SCAN_HISTORY, STORAGE_KEYS.SESSION_STATE, STORAGE_KEYS.TELEMETRY_DATA].includes(key as any);
+      const payload = isSensitive ? SecurityCore.safeEncode(data, INTERNAL_KEY) : JSON.stringify(data);
+      provider?.setItem(key, payload);
     } catch (e) {
-      console.error('Storage Persistence Failure:', e);
+      StorageService.logEvent('ERROR', 'STORAGE', 'SAVE_FAILED', { key, error: String(e) });
     }
   },
   
   load: <T,>(key: string, fallback: T): T => {
-    const item = provider.getItem(key);
+    const item = provider?.getItem(key);
     if (!item) return fallback;
+    
+    const isSensitive = [STORAGE_KEYS.SCAN_HISTORY, STORAGE_KEYS.SESSION_STATE, STORAGE_KEYS.TELEMETRY_DATA].includes(key as any);
+    if (isSensitive) {
+        const decrypted = SecurityCore.safeDecode(item, INTERNAL_KEY);
+        if (decrypted) return decrypted as T;
+    }
+
     try {
       return JSON.parse(item) as T;
     } catch (e) {
-      console.error(`CRITICAL: Data Corruption at key ${key}.`, e);
-      throw new DataCorruptionError(`Failed to parse data for key: ${key}`);
+      if (isSensitive) throw new DataCorruptionError(`Security mismatch for key: ${key}`);
+      return fallback;
     }
   },
 
+  logTelemetry: (event: Omit<TelemetryEvent, 'timestamp' | 'isOutlier'>) => {
+      try {
+          const data = StorageService.load<TelemetryEvent[]>(STORAGE_KEYS.TELEMETRY_DATA, []);
+          const newEvent: TelemetryEvent = {
+              ...event,
+              timestamp: Date.now(),
+              isOutlier: event.latency > 30000 || event.latency < 200
+          };
+          data.push(newEvent);
+          if (data.length > 200) data.shift();
+          StorageService.save(STORAGE_KEYS.TELEMETRY_DATA, data);
+      } catch (e) {
+          console.error("Telemetry failed", e);
+      }
+  },
+
+  getTelemetry: (): TelemetryEvent[] => StorageService.load<TelemetryEvent[]>(STORAGE_KEYS.TELEMETRY_DATA, []),
+
+  saveFeedback: (entry: FeedbackEntry) => {
+      const logs = StorageService.load<FeedbackEntry[]>(STORAGE_KEYS.CLINICAL_FEEDBACK, []);
+      logs.unshift(entry);
+      if (logs.length > 50) logs.length = 50;
+      StorageService.save(STORAGE_KEYS.CLINICAL_FEEDBACK, logs);
+  },
+
+  getFeedback: (): FeedbackEntry[] => StorageService.load<FeedbackEntry[]>(STORAGE_KEYS.CLINICAL_FEEDBACK, []),
+
   async saveScan(result: AnalysisResult): Promise<void> {
     const history = loadHistory();
-    
-    // Deterministic progression marker instead of Date.now()
-    persistenceCounter++;
-    // This service is the single source of truth for timestamps.
-    const deterministicResult: AnalysisResult = { 
-        ...result, 
-        createdAt: persistenceCounter,
-        timestamp: Date.now() // The real-world timestamp is applied here.
-    };
+    const deterministicResult: AnalysisResult = { ...result, timestamp: Date.now() };
     
     history.scans.push(deterministicResult);
     history.latestScan = deterministicResult;
     history.evolutionMetrics.entropyTrend.push(deterministicResult.entropyScore);
     history.evolutionMetrics.integrityTrend.push(deterministicResult.integrity);
-    history.evolutionMetrics.dates.push(`ID_${persistenceCounter}`);
+    history.evolutionMetrics.dates.push(new Date().toISOString());
 
     StorageService.save(STORAGE_KEYS.SCAN_HISTORY, history);
   },
 
-  getScanHistory(): ScanHistory {
-    return loadHistory();
-  },
+  getScanHistory(): ScanHistory { return loadHistory(); },
   
-  logAuditEvent: (action: string, details?: Record<string, any>) => {
+  logEvent: (level: SystemLogEntry['level'], module: string, action: string, details?: any) => {
     try {
-        const logs = StorageService.load<any[]>(STORAGE_KEYS.AUDIT_LOG, []);
-        const newLog = {
-            timestamp: new Date().toISOString(),
-            action,
-            details: details || {}
+        const item = provider?.getItem(STORAGE_KEYS.AUDIT_LOG);
+        const logs: SystemLogEntry[] = item ? JSON.parse(item) : [];
+        const newLog: SystemLogEntry = {
+            timestamp: new Date().toISOString(), level, module, action, details: details || null
         };
-        logs.unshift(newLog); // Add to the beginning
-        // Keep only the last 50 log entries
-        if (logs.length > 50) {
-            logs.length = 50;
-        }
-        StorageService.save(STORAGE_KEYS.AUDIT_LOG, logs);
+        logs.unshift(newLog);
+        if (logs.length > 50) logs.length = 50;
+        provider?.setItem(STORAGE_KEYS.AUDIT_LOG, JSON.stringify(logs));
+    } catch (e) {}
+  },
+
+  // Added injectState to handle clinical recovery of session state
+  injectState: (json: string): boolean => {
+    try {
+      const data = JSON.parse(json);
+      if (!data || typeof data !== 'object') return false;
+
+      // Handle raw session state injection
+      if (data.history && Array.isArray(data.history)) {
+          StorageService.save(STORAGE_KEYS.SESSION_STATE, {
+              nodes: data.nodes || [],
+              history: data.history
+          });
+          return true;
+      }
+
+      // Handle evolution bundle or recognized keys
+      let injected = false;
+      Object.entries(data).forEach(([key, value]) => {
+          if (Object.values(STORAGE_KEYS).includes(key as any)) {
+              StorageService.save(key, value);
+              injected = true;
+          }
+      });
+      return injected;
     } catch (e) {
-        console.error("Failed to write to audit log:", e);
+      return false;
     }
   },
 
   clear: () => {
-    // CRITICAL: Preserve audit log and language settings during a wipe.
-    const preservedKeys: string[] = [STORAGE_KEYS.LANG, STORAGE_KEYS.AUDIT_LOG];
-    
+    const preservedKeys: string[] = [STORAGE_KEYS.LANG, STORAGE_KEYS.AUDIT_LOG, STORAGE_KEYS.CLINICAL_FEEDBACK];
     Object.values(STORAGE_KEYS).forEach(key => {
-      if (!preservedKeys.includes(key)) {
-        provider.removeItem(key);
+      if (!preservedKeys.includes(key as any)) {
+        provider?.removeItem(key as any);
       }
     });
-    persistenceCounter = 0;
-    StorageService.logAuditEvent("SESSION_WIPE_EXECUTED");
   }
 };

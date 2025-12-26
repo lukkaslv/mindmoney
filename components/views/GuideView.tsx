@@ -40,13 +40,13 @@ export const GuideView: React.FC<GuideViewProps> = ({ t, onBack }) => {
                     onClick={() => { setMode('client'); PlatformBridge.haptic.impact('light'); }}
                     className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'client' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                    Client Mode
+                    {t.ui.mode_client}
                 </button>
                 <button 
                     onClick={() => { setMode('pro'); PlatformBridge.haptic.impact('light'); }}
                     className={`flex-1 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${mode === 'pro' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                    Specialist Mode
+                    {t.ui.mode_pro}
                 </button>
             </div>
         </div>

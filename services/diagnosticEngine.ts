@@ -1,5 +1,6 @@
 
 import { RawAnalysisResult, AnalysisResult, ArchetypeKey, VerdictKey, ProtocolStep, PhaseType, TaskKey, PatternFlags } from '../types';
+import { SecurityCore } from '../utils/crypto';
 
 const ARCHETYPE_INDEX_MAP: ArchetypeKey[] = [
   'THE_ARCHITECT', 'THE_DRIFTER', 'THE_BURNED_HERO',
@@ -12,32 +13,16 @@ const VERDICT_INDEX_MAP: VerdictKey[] = [
 ];
 
 const TASKS_LOGIC: Record<PhaseType, Array<{ taskKey: TaskKey, targetMetricKey: string }>> = {
-  SANITATION: [
-    { taskKey: "sanitation_1", targetMetricKey: "Focus +10%" }, { taskKey: "sanitation_2", targetMetricKey: "Sync +15%" },
-    { taskKey: "sanitation_3", targetMetricKey: "Space +15%" }, { taskKey: "sanitation_4", targetMetricKey: "Clarity +20%" },
-    { taskKey: "sanitation_5", targetMetricKey: "Control +10%" }, { taskKey: "sanitation_6", targetMetricKey: "Awareness +12%" },
-    { taskKey: "sanitation_7", targetMetricKey: "Space +25%" }
-  ],
-  STABILIZATION: [
-    { taskKey: "stabilization_1", targetMetricKey: "Agency +12%" }, { taskKey: "stabilization_2", targetMetricKey: "Foundation +15%" },
-    { taskKey: "stabilization_3", targetMetricKey: "Will +10%" }, { taskKey: "stabilization_4", targetMetricKey: "Stability +15%" },
-    { taskKey: "stabilization_5", targetMetricKey: "Focus +12%" }, { taskKey: "stabilization_6", targetMetricKey: "Agency +15%" },
-    { taskKey: "stabilization_7", targetMetricKey: "Integrity +15%" }
-  ],
-  EXPANSION: [
-    { taskKey: "expansion_1", targetMetricKey: "Courage +20%" }, { taskKey: "expansion_2", targetMetricKey: "Resource +15%" },
-    { taskKey: "expansion_3", targetMetricKey: "Agency +20%" }, { taskKey: "expansion_4", targetMetricKey: "Visibility +25%" },
-    { taskKey: "expansion_5", targetMetricKey: "Scale +30%" }, { taskKey: "expansion_6", targetMetricKey: "Vision +20%" },
-    { taskKey: "expansion_7", targetMetricKey: "Integrity +25%" }
-  ]
+  SANITATION: [{ taskKey: "sanitation_1", targetMetricKey: "Focus" }, { taskKey: "sanitation_2", targetMetricKey: "Sync" }, { taskKey: "sanitation_3", targetMetricKey: "Space" }, { taskKey: "sanitation_4", targetMetricKey: "Clarity" }, { taskKey: "sanitation_5", targetMetricKey: "Control" }, { taskKey: "sanitation_6", targetMetricKey: "Awareness" }, { taskKey: "sanitation_7", targetMetricKey: "Space" }],
+  STABILIZATION: [{ taskKey: "stabilization_1", targetMetricKey: "Agency" }, { taskKey: "stabilization_2", targetMetricKey: "Foundation" }, { taskKey: "stabilization_3", targetMetricKey: "Will" }, { taskKey: "stabilization_4", targetMetricKey: "Stability" }, { taskKey: "stabilization_5", targetMetricKey: "Focus" }, { taskKey: "stabilization_6", targetMetricKey: "Agency" }, { taskKey: "stabilization_7", targetMetricKey: "Integrity" }],
+  EXPANSION: [{ taskKey: "expansion_1", targetMetricKey: "Courage" }, { taskKey: "expansion_2", targetMetricKey: "Resource" }, { taskKey: "expansion_3", targetMetricKey: "Agency" }, { taskKey: "expansion_4", targetMetricKey: "Visibility" }, { taskKey: "expansion_5", targetMetricKey: "Scale" }, { taskKey: "expansion_6", targetMetricKey: "Vision" }, { taskKey: "expansion_7", targetMetricKey: "Integrity" }]
 };
 
 export const DiagnosticEngine = {
-  interpret(raw: RawAnalysisResult, patternFlags: PatternFlags): AnalysisResult {
-    const { state, phase, conflicts, activePatterns } = raw;
+  interpret(raw: RawAnalysisResult, patternFlags: PatternFlags & { isInconsistentRhythm?: boolean }): AnalysisResult {
+    const { state, phase, conflicts } = raw;
     const { foundation: f, agency: a, resource: r, entropy: e } = state;
 
-    // 1. Archetype Determination
     const archetypeSpectrum = ([
       { key: 'THE_CHAOS_SURFER', score: e },
       { key: 'THE_DRIFTER', score: 100 - a },
@@ -51,7 +36,6 @@ export const DiagnosticEngine = {
     const secondary = archetypeSpectrum[1];
     const matchPercent = Math.round((primary.score / (primary.score + (secondary?.score || 0))) * 100);
 
-    // 2. Verdict Determination (Single Source of Truth)
     let verdictKey: VerdictKey = 'HEALTHY_SCALE';
     if (f <= 35) verdictKey = 'CRITICAL_DEFICIT';
     else if (a > 75 && f < 45) verdictKey = 'BRILLIANT_SABOTAGE';
@@ -60,28 +44,31 @@ export const DiagnosticEngine = {
     else if (a < 35 && e > 45) verdictKey = 'PARALYZED_GIANT';
     else if (f < 50 && a < 50 && r < 50 && e < 40) verdictKey = 'FROZEN_POTENTIAL';
 
-    // 3. Roadmap Generation
     const pool = TASKS_LOGIC[phase];
     const roadmap = Array.from({ length: 7 }, (_, i) => ({ day: i + 1, phase, ...pool[i % pool.length] }));
 
-    // 4. Share Code Generation
     const archIndex = ARCHETYPE_INDEX_MAP.indexOf(primary.key);
     const verdictIndex = VERDICT_INDEX_MAP.indexOf(verdictKey);
-    const payload = new Uint8Array([
-        Math.round(f), Math.round(a), Math.round(r), Math.round(e),
-        archIndex !== -1 ? archIndex : 4, // Default to Chaos Surfer
-        Math.round(raw.neuroSync),
-        verdictIndex !== -1 ? verdictIndex : 0 // Default to Healthy
-    ]);
-    const shareCode = btoa(String.fromCharCode(...payload)).replace(/=/g, '');
+    
+    const dataStr = `${Math.round(f)}|${Math.round(a)}|${Math.round(r)}|${Math.round(e)}|${archIndex}|${Math.round(raw.neuroSync)}|${verdictIndex}`;
+    const sig = SecurityCore.generateChecksum(dataStr);
+    const shareCode = btoa(`${dataStr}#${sig}`).replace(/=/g, '');
 
-    // 5. Narrative & Strategic Fields
     const coreConflict = conflicts.length > 0 ? conflicts[0].key : (verdictKey !== 'HEALTHY_SCALE' ? verdictKey.toLowerCase() : 'none');
     
-    // 6. Validity Override
+    // BLUE TEAM PROTOCOL: Aggressive Anomaly Detection
     let finalValidity = raw.validity;
-    if (patternFlags.isMonotonic || patternFlags.isHighSkipRate || patternFlags.isFlatline || patternFlags.isRoboticTiming || patternFlags.isSomaticMonotony) {
+    let anomalyCount = 0;
+    if (patternFlags.isMonotonic) anomalyCount += 2;
+    if (patternFlags.isRoboticTiming) anomalyCount += 3;
+    if (patternFlags.isInconsistentRhythm) anomalyCount += 2;
+    if (patternFlags.isHighSkipRate) anomalyCount += 1;
+    if (patternFlags.isEarlyTermination) anomalyCount += 2;
+
+    if (anomalyCount >= 4) {
         finalValidity = 'INVALID';
+    } else if (anomalyCount >= 2) {
+        finalValidity = 'SUSPICIOUS';
     }
 
     return {
@@ -100,8 +87,7 @@ export const DiagnosticEngine = {
       graphPoints: [{ x: 50, y: 50 - f / 2.5 }, { x: 50 + r / 2.2, y: 50 + r / 3.5 }, { x: 50 - a / 2.2, y: 50 + a / 3.5 }],
       interventionStrategy: f < 40 ? 'stabilize_foundation' : e > 50 ? 'lower_entropy' : 'activate_will',
       coreConflict: coreConflict,
-      shadowDirective: activePatterns.includes('hero_martyr') ? 'self_sabotage_fix' : 'integrity_boost',
-      interferenceInsight: activePatterns.includes('family_loyalty') ? 'family_vs_money' : undefined,
+      shadowDirective: 'integrity_boost',
       patternFlags
     };
   }

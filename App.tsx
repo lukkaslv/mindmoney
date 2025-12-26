@@ -1,13 +1,13 @@
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Layout } from './components/Layout.tsx';
 import { MODULE_REGISTRY, TOTAL_NODES, ONBOARDING_NODES_COUNT, DOMAIN_SETTINGS } from './constants.ts';
-import { translations } from './translations.ts';
+// FIXED: Remove .ts extension for consistent module resolution
+import { translations } from './translations';
 import { calculateRawMetrics } from './services/psychologyService.ts';
 import { DiagnosticEngine } from './services/diagnosticEngine.ts';
 import { DomainType, Translations, AnalysisResult, GameHistoryItem, ScanHistory, DataCorruptionError } from './types.ts';
 import { StorageService, STORAGE_KEYS, SessionState } from './services/storageService.ts';
-import { simpleHash, resolvePath, PlatformBridge } from './utils/helpers.ts';
+import { resolvePath, PlatformBridge } from './utils/helpers.ts';
 import { useTestEngine } from './hooks/useTestEngine.ts';
 import { AdaptiveQuestionEngine } from './services/adaptiveQuestionEngine.ts';
 import { PatternDetector } from './services/PatternDetector.ts';
@@ -25,17 +25,19 @@ import { BriefExplainerView } from './components/views/BriefExplainerView.tsx';
 import { DataCorruptionView } from './components/views/DataCorruptionView.tsx';
 import { generateShareImage } from './utils/shareGenerator.ts';
 import { InvalidResultsView } from './components/views/InvalidResultsView.tsx';
+import { SystemIntegrityView } from './components/views/SystemIntegrityView.tsx';
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<'ru' | 'ka'>(() => (localStorage.getItem(STORAGE_KEYS.LANG) as 'ru' | 'ka') || 'ru');
   const t: Translations = useMemo(() => translations[lang], [lang]);
   
-  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'reflection' | 'results' | 'admin' | 'compatibility' | 'guide' | 'brief_explainer'>('auth');
+  const [view, setView] = useState<'auth' | 'boot' | 'dashboard' | 'test' | 'body_sync' | 'reflection' | 'results' | 'admin' | 'compatibility' | 'guide' | 'brief_explainer' | 'system_integrity'>('auth');
   const [dataStatus, setDataStatus] = useState<'ok' | 'corrupted'>('ok');
   const [activeModule, setActiveModule] = useState<DomainType | null>(null);
   const [currentDomain, setCurrentDomain] = useState<DomainType | null>(null);
   const [completedNodeIds, setCompletedNodeIds] = useState<number[]>([]);
   const [isDemo, setIsDemo] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const [bootShown, setBootShown] = useState(() => sessionStorage.getItem('genesis_boot_seen') === 'true');
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanHistory | null>(null);
@@ -45,30 +47,69 @@ const App: React.FC = () => {
 
   const engine = useTestEngine({
     completedNodeIds,
-    setCompletedNodeIds,
+    setCompletedNodeIds: (fn: any) => setCompletedNodeIds(fn),
     history,
-    setHistory,
+    setHistory: (fn: any) => setHistory(fn),
     setView,
     activeModule,
     setActiveModule,
     isDemo
   });
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+        if (e.key === STORAGE_KEYS.SESSION_STATE) {
+            try {
+                const newState = JSON.parse(e.newValue || '{}') as SessionState;
+                if (newState.nodes) setCompletedNodeIds(newState.nodes);
+                if (newState.history) setHistory(newState.history);
+            } catch (err) { console.error("Tab Sync Error", err); }
+        }
+    };
+    window.addEventListener('storage', handleStorage);
+    
+    if (window.Telegram?.WebApp?.BackButton) {
+        const bb = window.Telegram.WebApp.BackButton;
+        if (view !== 'auth' && view !== 'dashboard' && view !== 'admin' && view !== 'system_integrity') {
+            bb.show();
+            const handleBack = () => {
+                if (view === 'test' || view === 'body_sync') {
+                    PlatformBridge.showConfirm(
+                        lang === 'ru' ? "Выйти в дашборд? Прогресс текущего вопроса будет потерян." : "გსურთ გასვლა?",
+                        (confirmed) => {
+                            if (confirmed) setView('dashboard');
+                        }
+                    );
+                } else {
+                    setView('dashboard');
+                }
+            };
+            bb.onClick(handleBack);
+            return () => {
+                bb.offClick(handleBack);
+                bb.hide();
+            };
+        } else {
+            bb.hide();
+        }
+    }
+
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [view, lang]);
+
   const result = useMemo<AnalysisResult | null>(() => {
     if (history.length < ONBOARDING_NODES_COUNT) return null;
     const rawResult = calculateRawMetrics(history);
-    // FIX: Pass patternFlags to interpret to satisfy function signature.
     const patternFlags = PatternDetector.analyze(history);
     return DiagnosticEngine.interpret(rawResult, patternFlags);
   }, [history]);
 
   const adaptiveState = useMemo(() => {
-    const history = engine.state.history;
     const baseline = history.length > 0 
       ? history.slice(0, 5).reduce((a, b) => a + b.latency, 0) / Math.max(1, Math.min(5, history.length))
       : 2000;
     return AdaptiveQuestionEngine.getAdaptiveState(history, baseline);
-  }, [engine.state.history]);
+  }, [history]);
 
   const globalProgress = useMemo(() => {
     return Math.min(100, Math.round(adaptiveState.clarity));
@@ -84,29 +125,18 @@ const App: React.FC = () => {
     
     try {
         const sessionState = StorageService.load<SessionState>(STORAGE_KEYS.SESSION_STATE, { nodes: [], history: [] });
-        const savedNodes = sessionState.nodes.map(id => typeof id === 'string' ? parseInt(id, 10) : id);
-        setCompletedNodeIds(savedNodes);
+        setCompletedNodeIds(sessionState.nodes.map(id => typeof id === 'string' ? parseInt(id, 10) : id));
         setHistory(sessionState.history);
     } catch (e) {
-        if (e instanceof DataCorruptionError) {
-            setDataStatus('corrupted');
-            StorageService.logAuditEvent("DATA_CORRUPTION_DETECTED", { error: e.message });
-        } else {
-            console.error("An unexpected error occurred during startup:", e);
-        }
+        if (e instanceof DataCorruptionError) setDataStatus('corrupted');
     }
 
-    const sessionAuth = localStorage.getItem(STORAGE_KEYS.SESSION);
     const loadedScanHistory = StorageService.getScanHistory();
     setScanHistory(loadedScanHistory);
 
-    if (sessionAuth === 'true') {
-        setView('dashboard');
-        setIsDemo(false);
-    } else if (sessionAuth === 'demo') {
-        setView('dashboard');
-        setIsDemo(true);
-    }
+    const sessionAuth = localStorage.getItem(STORAGE_KEYS.SESSION);
+    if (sessionAuth === 'true') { setView('dashboard'); setIsDemo(false); setIsPro(true); }
+    else if (sessionAuth === 'demo') { setView('dashboard'); setIsDemo(true); setIsPro(false); }
   }, [lang]);
 
   const nodes = useMemo(() => {
@@ -126,51 +156,58 @@ const App: React.FC = () => {
 
   const handleLogin = useCallback((password: string, demo = false): boolean => {
     PlatformBridge.haptic.impact('light');
-    
     if (demo) {
         localStorage.setItem(STORAGE_KEYS.SESSION, 'demo');
         setIsDemo(true);
+        setIsPro(false);
         setView(bootShown ? 'dashboard' : 'boot');
         return true;
     }
-    
     const cleanPassword = password.toLowerCase().trim();
-
-    if (cleanPassword === "genesis_prime") {
-        setView('admin'); 
-        return true; 
-    }
-
+    if (cleanPassword === "genesis_prime") { setIsPro(true); setView('admin'); return true; }
     if (cleanPassword === "genesis_lab_entry") {
       localStorage.setItem(STORAGE_KEYS.SESSION, 'true');
       setIsDemo(false);
+      setIsPro(true);
       setView(bootShown ? 'dashboard' : 'boot');
       return true;
     }
-
     PlatformBridge.haptic.notification('error');
     return false;
   }, [bootShown]);
 
   const handleLogout = useCallback(() => {
-     PlatformBridge.haptic.impact('medium');
      localStorage.removeItem(STORAGE_KEYS.SESSION);
      sessionStorage.removeItem('genesis_boot_seen');
      setBootShown(false);
+     setIsPro(false);
      setView('auth');
   }, []);
 
-  const handleReset = useCallback(() => {
-    const msg = lang === 'ru' ? "Сбросить текущую сессию?" : "გსურთ სესიის გადატვირთვა?";
-    if (confirm(msg)) {
+  const handleReset = useCallback((force: boolean = false) => {
+    const performResetAction = () => {
       StorageService.clear();
       sessionStorage.removeItem('genesis_boot_seen');
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
       setBootShown(false);
       setCompletedNodeIds([]);
       setHistory([]);
       setDataStatus('ok');
+      setIsDemo(false);
+      setIsPro(false);
       setView('auth');
-      window.location.reload();
+      PlatformBridge.haptic.notification('success');
+    };
+
+    if (force) {
+      performResetAction();
+    } else {
+      PlatformBridge.showConfirm(
+        lang === 'ru' ? "Сбросить текущую сессию?" : "გსურთ სესიის გადატვირთვა?",
+        (confirmed) => {
+          if (confirmed) performResetAction();
+        }
+      );
     }
   }, [lang]);
 
@@ -194,7 +231,7 @@ const App: React.FC = () => {
   const handleShare = useCallback(async () => {
     if (!result) return;
     const blob = await generateShareImage(result, t);
-    const text = `Genesis OS Blueprint: ${t.archetypes[result.archetypeKey].title}. Share Code: ${result.shareCode}`;
+    const text = `Genesis OS Blueprint: ${t.archetypes[result.archetypeKey]?.title || 'Analysis'}. Share Code: ${result.shareCode}`;
     if (blob && navigator.share) {
        try {
          const file = new File([blob], 'genesis_blueprint.png', { type: 'image/png' });
@@ -207,53 +244,37 @@ const App: React.FC = () => {
     PlatformBridge.openLink(t.results.share_url);
   }, [result, t]);
 
-  const layoutProps = { lang, onLangChange: setLang, soundEnabled, onSoundToggle: () => setSoundEnabled(!soundEnabled), onLogout: handleLogout, onReset: handleReset };
+  const layoutProps = { lang, onLangChange: setLang, soundEnabled, onSoundToggle: () => setSoundEnabled(!soundEnabled), onLogout: handleLogout, onReset: () => handleReset(false) };
 
   const renderCurrentView = () => {
-    if (dataStatus === 'corrupted') {
-      return <DataCorruptionView t={t} onReset={handleReset} />;
-    }
-
+    if (dataStatus === 'corrupted') return <DataCorruptionView t={t} onReset={() => handleReset(true)} />;
     switch (view) {
-      case 'auth':
-        return <AuthView onLogin={handleLogin} t={t} />;
-      case 'boot':
-        return <BootView isDemo={isDemo} onComplete={() => { sessionStorage.setItem('genesis_boot_seen', 'true'); setBootShown(true); setView('dashboard'); }} />;
-      case 'dashboard':
-        return <DashboardView t={t} isDemo={isDemo} globalProgress={globalProgress} result={result} currentDomain={currentDomain} nodes={nodes} completedNodeIds={completedNodeIds} onSetView={setView as any} onSetCurrentDomain={onSetCurrentDomain => setCurrentDomain(onSetCurrentDomain)} onStartNode={engine.startNode} onLogout={handleLogout} scanHistory={scanHistory} />;
-      case 'test':
-        if (!activeModule) return null;
-        return <TestView t={t} activeModule={activeModule} currentId={engine.state.currentId} scene={MODULE_REGISTRY[activeModule]?.[engine.state.currentId]} onChoice={engine.handleChoice} onExit={() => setView('dashboard')} getSceneText={getSceneText} adaptiveState={adaptiveState} />;
-      case 'body_sync':
-        return <BodySyncView t={t} onSync={engine.syncBodySensation} />;
-      case 'reflection':
-        return <ReflectionView t={t} sensation={engine.state.history[engine.state.history.length - 1]?.sensation} />;
-      case 'results':
-        if (!result) return null;
-        // FIX: Handle invalid results by showing a dedicated view.
-        if (result.validity === 'INVALID') {
-          return <InvalidResultsView t={t} onReset={handleReset} patternFlags={result.patternFlags} />;
-        }
-        return <ResultsView t={t} result={result} isGlitchMode={!!isGlitchMode} onContinue={handleContinue} onShare={handleShare} onBack={() => setView('dashboard')} getSceneText={getSceneText} adaptiveState={adaptiveState} onOpenBriefExplainer={() => setView('brief_explainer')} />;
-      case 'compatibility':
-        return <CompatibilityView userResult={result} t={t} onBack={() => setView('dashboard')} />;
-      case 'guide':
-        return <GuideView t={t} onBack={() => setView('dashboard')} />;
-      case 'brief_explainer':
-        return <BriefExplainerView t={t} onBack={() => setView('results')} />;
-      default:
-        return <AuthView onLogin={handleLogin} t={t} />;
+      case 'auth': return <AuthView onLogin={handleLogin} t={t} lang={lang} onLangChange={setLang} />;
+      case 'boot': return <BootView isDemo={isDemo} onComplete={() => { sessionStorage.setItem('genesis_boot_seen', 'true'); setBootShown(true); setView('dashboard'); }} t={t} />;
+      case 'dashboard': return <DashboardView lang={lang} t={t} isDemo={isDemo} globalProgress={globalProgress} result={result} currentDomain={currentDomain} nodes={nodes} completedNodeIds={completedNodeIds} onSetView={setView as any} onSetCurrentDomain={onSetCurrentDomain => setCurrentDomain(onSetCurrentDomain)} onStartNode={engine.startNode} onLogout={handleLogout} scanHistory={scanHistory} />;
+      case 'test': return !activeModule ? null : <TestView t={t} activeModule={activeModule} currentId={engine.state.currentId} scene={MODULE_REGISTRY[activeModule]?.[engine.state.currentId]} onChoice={engine.handleChoice} onExit={() => setView('dashboard')} getSceneText={getSceneText} adaptiveState={adaptiveState} />;
+      case 'body_sync': return <BodySyncView lang={lang} t={t} onSync={engine.syncBodySensation} />;
+      case 'reflection': return <ReflectionView lang={lang} t={t} sensation={history[history.length - 1]?.sensation} />;
+      case 'results': if (!result) return null; return result.validity === 'INVALID' ? <InvalidResultsView t={t} onReset={() => handleReset(true)} patternFlags={result.patternFlags} /> : <ResultsView lang={lang} t={t} result={result} isGlitchMode={!!isGlitchMode} onContinue={handleContinue} onShare={handleShare} onBack={() => setView('dashboard')} getSceneText={getSceneText} adaptiveState={adaptiveState} onOpenBriefExplainer={() => setView('brief_explainer')} />;
+      case 'compatibility': return <CompatibilityView lang={lang} userResult={result} isProSession={isPro} onUnlockPro={() => setIsPro(true)} t={t} onBack={() => setView('dashboard')} />;
+      case 'guide': return <GuideView t={t} onBack={() => setView('dashboard')} />;
+      case 'brief_explainer': return <BriefExplainerView t={t} onBack={() => setView('results')} />;
+      default: return <AuthView onLogin={handleLogin} t={t} lang={lang} onLangChange={setLang} />;
     }
   };
   
   return (
     <div className={`w-full h-full ${isGlitchMode ? 'glitch' : ''}`}>
       {view === 'admin' ? (
-        <AdminPanel t={t} onExit={() => setView('auth')} result={result} history={engine.state.history} onUnlockAll={engine.forceCompleteAll} glitchEnabled={forceGlitch} onToggleGlitch={() => setForceGlitch(!forceGlitch)} />
+        <AdminPanel t={t} onExit={() => setView('auth')} result={result} history={history} onUnlockAll={engine.forceCompleteAll} glitchEnabled={forceGlitch} onToggleGlitch={() => setForceGlitch(!forceGlitch)} onSetView={setView} />
+      ) : view === 'system_integrity' ? (
+        <SystemIntegrityView t={t} onBack={() => setView('admin')} />
+      ) : view === 'auth' ? (
+        <AuthView onLogin={handleLogin} t={t} lang={lang} onLangChange={setLang} />
+      ) : view === 'boot' ? (
+        <BootView isDemo={isDemo} onComplete={() => { sessionStorage.setItem('genesis_boot_seen', 'true'); setBootShown(true); setView('dashboard'); }} t={t} />
       ) : (
-        <Layout {...layoutProps}>
-          {renderCurrentView()}
-        </Layout>
+        <Layout {...layoutProps}>{renderCurrentView()}</Layout>
       )}
     </div>
   );

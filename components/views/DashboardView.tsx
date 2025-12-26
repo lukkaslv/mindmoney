@@ -1,7 +1,7 @@
 
 import React, { memo, useMemo } from 'react';
 import { DomainType, Translations, AnalysisResult, ScanHistory } from '../../types';
-import { DOMAIN_SETTINGS } from '../../constants';
+import { DOMAIN_SETTINGS, SYSTEM_METADATA } from '../../constants';
 import { EvolutionDashboard } from '../EvolutionDashboard';
 
 export interface NodeUI {
@@ -12,6 +12,7 @@ export interface NodeUI {
 }
 
 interface DashboardViewProps {
+  lang: 'ru' | 'ka';
   t: Translations;
   isDemo: boolean;
   globalProgress: number;
@@ -27,7 +28,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView = memo<DashboardViewProps>(({
-  t, isDemo, globalProgress, result, currentDomain, nodes, completedNodeIds,
+  lang, t, isDemo, globalProgress, result, currentDomain, nodes, completedNodeIds,
   onSetView, onSetCurrentDomain, onStartNode, onLogout, scanHistory
 }) => {
   
@@ -46,10 +47,8 @@ export const DashboardView = memo<DashboardViewProps>(({
     DOMAIN_SETTINGS.filter(d => nodes.filter(n => n.domain === d.key && n.done).length === d.count).length
   , [nodes]);
 
-  // Strategic Alignment: Retest check
   const needsRetest = useMemo(() => {
       if (!scanHistory || scanHistory.scans.length === 0) return false;
-      // In a real app, we check dates. Here we check the persistenceCounter delta for simulation
       const latest = scanHistory.scans[scanHistory.scans.length - 1];
       return latest.createdAt ? (Date.now() - latest.createdAt > 7 * 24 * 60 * 60 * 1000) : false;
   }, [scanHistory]);
@@ -58,12 +57,12 @@ export const DashboardView = memo<DashboardViewProps>(({
     <div className="space-y-6 animate-in flex flex-col h-full">
       <header className="space-y-3 shrink-0">
         <div className="flex justify-between items-center px-1">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2 italic">
-                STATUS <span className="text-indigo-600">REPORT</span>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 italic">
+                {t.ui.status_report_title}
             </h2>
             <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-tighter">Live Uplink</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-tighter">OVERSIGHT_v{SYSTEM_METADATA.VERSION.split('-')[0]}</span>
             </div>
         </div>
         
@@ -83,10 +82,8 @@ export const DashboardView = memo<DashboardViewProps>(({
         </div>
       </header>
 
-      {/* EVOLUTION DASHBOARD (Longitudinal) */}
-      <EvolutionDashboard history={scanHistory} />
+      <EvolutionDashboard history={scanHistory} lang={lang} />
 
-      {/* CORE METRICS CARD */}
       <section 
         className={`p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden shrink-0 group cursor-pointer transition-all active:scale-[0.98] ${globalProgress === 100 ? 'bg-indigo-600 ring-4 ring-indigo-500/20' : 'dark-glass-card'}`} 
         onClick={() => result && onSetView('results')}
@@ -95,9 +92,9 @@ export const DashboardView = memo<DashboardViewProps>(({
          
          <div className="flex justify-between items-end relative z-10">
             <div className="space-y-1">
-               <span className={`text-[10px] font-black uppercase tracking-widest ${globalProgress === 100 ? 'text-indigo-200' : 'text-slate-500'}`}>System Audit</span>
+               <span className={`text-[10px] font-black uppercase tracking-widest ${globalProgress === 100 ? 'text-indigo-200' : 'text-slate-500'}`}>{t.ui.system_audit_title}</span>
                <div className={`text-2xl font-black italic uppercase tracking-tighter ${globalProgress === 100 ? 'text-white' : 'text-white'}`}>
-                  {t.global.progress} <span className={globalProgress === 100 ? 'text-emerald-300' : 'text-indigo-400'}>{globalProgress}%</span>
+                  {t.ui.progress_label} <span className={globalProgress === 100 ? 'text-emerald-300' : 'text-indigo-400'}>{globalProgress}%</span>
                </div>
             </div>
             {result && (
@@ -125,7 +122,6 @@ export const DashboardView = memo<DashboardViewProps>(({
          </div>
       </section>
 
-      {/* SYSTEM ACCESS: TERMINAL & GUIDE BUTTONS */}
       <div className="grid grid-cols-2 gap-3 px-1">
           <button 
             onClick={() => onSetView('compatibility')} 
@@ -148,7 +144,7 @@ export const DashboardView = memo<DashboardViewProps>(({
         <div className="space-y-3 flex-1">
           <div className="flex justify-between items-center px-1">
             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{t.dashboard.select_domain}</h3>
-            <span className="text-[9px] font-mono font-bold text-slate-300 uppercase">{activeDomainCount} / 5 SECURED</span>
+            <span className="text-[9px] font-mono font-bold text-slate-300 uppercase">{activeDomainCount} / 5 {t.ui.secured_label}</span>
           </div>
           <div className="grid grid-cols-1 gap-3 pb-8">
             {DOMAIN_SETTINGS.map(config => {
@@ -187,7 +183,7 @@ export const DashboardView = memo<DashboardViewProps>(({
         <div className="space-y-6 animate-in flex-1 flex flex-col">
           <div className="flex justify-between items-center shrink-0">
             <button onClick={() => onSetCurrentDomain(null)} className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase bg-indigo-50 px-3 py-2 rounded-xl hover:bg-indigo-100 transition-colors">
-                <span className="text-xs">←</span> {t.global.back || 'Back'}
+                <span className="text-xs">←</span> {t.global.back}
             </button>
             <h3 className="text-lg font-black italic uppercase text-slate-900 tracking-tight">{t.domains[currentDomain]}</h3>
           </div>

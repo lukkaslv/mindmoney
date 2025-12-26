@@ -59,6 +59,15 @@ export const PlatformBridge = {
     }
   },
 
+  showConfirm: (message: string, callback: (confirmed: boolean) => void) => {
+    if (window.Telegram?.WebApp?.showConfirm) {
+      window.Telegram.WebApp.showConfirm(message, callback);
+    } else {
+      const confirmed = window.confirm(message);
+      callback(confirmed);
+    }
+  },
+
   haptic: {
     impact: (style: HapticStyle) => {
       if (window.Telegram?.WebApp?.HapticFeedback) {

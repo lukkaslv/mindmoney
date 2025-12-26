@@ -1,22 +1,16 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Translations } from '../../types';
 
 interface BootViewProps {
   isDemo: boolean;
   onComplete: () => void;
+  t: Translations;
 }
 
-export const BootView: React.FC<BootViewProps> = ({ isDemo, onComplete }) => {
+export const BootView: React.FC<BootViewProps> = ({ isDemo, onComplete, t }) => {
   const [bootStep, setBootStep] = useState(0);
-
-  const steps = [
-      "Initializing v6.4...",
-      isDemo ? "Trial Mode Active..." : "Loading Sovereign Engine...",
-      "Integrity Check: 100%",
-      "Calibrating Body Sensors... Breathe.",
-      "Syncing Uplink...",
-      "Ready."
-  ];
+  const steps = t.boot_sequence;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -28,7 +22,7 @@ export const BootView: React.FC<BootViewProps> = ({ isDemo, onComplete }) => {
     }, 600);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [steps]);
 
   useEffect(() => {
     if (bootStep === steps.length - 1) {

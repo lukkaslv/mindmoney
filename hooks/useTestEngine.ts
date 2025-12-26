@@ -6,9 +6,9 @@ import { MODULE_REGISTRY, ONBOARDING_NODES_COUNT, TOTAL_NODES, DOMAIN_SETTINGS }
 
 interface UseTestEngineProps {
   completedNodeIds: number[];
-  setCompletedNodeIds: (ids: number[]) => void;
+  setCompletedNodeIds: (ids: (prev: number[]) => number[]) => void;
   history: GameHistoryItem[];
-  setHistory: (history: GameHistoryItem[]) => void;
+  setHistory: (history: (prev: GameHistoryItem[]) => GameHistoryItem[]) => void;
   setView: (view: any) => void;
   activeModule: DomainType | null;
   setActiveModule: (d: DomainType | null) => void;
@@ -28,15 +28,11 @@ export const useTestEngine = ({
   
   const [state, setState] = useState({ 
     currentId: '0', 
-    history: history, 
-    lastChoice: null as ChoiceWithLatency | null 
+    lastChoice: StorageService.load<ChoiceWithLatency | null>('genesis_recovery_choice', null)
   });
   
-  useEffect(() => {
-    setState(prev => ({ ...prev, history }));
-  }, [history]);
-  
   const [lastSelectedNode, setLastSelectedNode] = useState<number | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const nodeStartTime = useRef<number>(0);
   const pauseStart = useRef<number>(0);
@@ -44,29 +40,38 @@ export const useTestEngine = ({
   const hardwareLatencyOffset = useRef<number>(0); 
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ATOMICITY FIX: Centralized state commit function
   const commitUpdate = useCallback((newItem: GameHistoryItem, lastNodeId: number) => {
-    const newHistory = [...history, newItem];
-    let newCompletedNodes = [...completedNodeIds];
-    if (!newCompletedNodes.includes(lastNodeId)) {
-      newCompletedNodes.push(lastNodeId);
-    }
+    let finalNodes: number[] = [];
     
-    // 1. Update React state
-    setHistory(newHistory);
-    setCompletedNodeIds(newCompletedNodes);
-    
-    // 2. Perform a single, atomic save to localStorage
-    const sessionState: SessionState = {
-        nodes: newCompletedNodes,
-        history: newHistory
-    };
-    StorageService.save(STORAGE_KEYS.SESSION_STATE, sessionState);
+    // SLC: Log Telemetry with Variant ID
+    const userId = localStorage.getItem(STORAGE_KEYS.SESSION) || 'anonymous';
+    const variantId = (userId.charCodeAt(0) % 2 === 0) ? 'A' : 'B';
 
-    return newCompletedNodes; // Return for advanceNode logic
-  }, [history, completedNodeIds, setHistory, setCompletedNodeIds]);
+    StorageService.logTelemetry({
+        nodeId: newItem.nodeId,
+        domain: newItem.domain,
+        latency: newItem.latency,
+        sensation: newItem.sensation,
+        beliefKey: newItem.beliefKey,
+        variantId
+    });
 
-  // Visibility API Protection logic
+    setHistory(prev => {
+        const next = [...prev, newItem];
+        setCompletedNodeIds(prevNodes => {
+            const nextNodes = prevNodes.includes(lastNodeId) ? prevNodes : [...prevNodes, lastNodeId];
+            finalNodes = nextNodes;
+            const sessionState: SessionState = { nodes: nextNodes, history: next };
+            StorageService.save(STORAGE_KEYS.SESSION_STATE, sessionState);
+            return nextNodes;
+        });
+        return next;
+    });
+
+    StorageService.save('genesis_recovery_choice', null);
+    return () => finalNodes;
+  }, [setHistory, setCompletedNodeIds]);
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -80,25 +85,13 @@ export const useTestEngine = ({
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
-  useEffect(() => {
-    const cal = localStorage.getItem('genesis_hardware_cal');
-    if (cal) hardwareLatencyOffset.current = parseFloat(cal);
-  }, []);
-
   const startNode = useCallback((nodeId: number, domain: DomainType) => {
     if (isDemo && nodeId >= 3) {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.('warning');
         return;
     }
     
-    if (history.length === 0) {
-        const start = performance.now();
-        requestAnimationFrame(() => {
-            hardwareLatencyOffset.current = performance.now() - start;
-            localStorage.setItem('genesis_hardware_cal', hardwareLatencyOffset.current.toString());
-        });
-    }
-
+    setIsProcessing(false);
     setLastSelectedNode(nodeId);
     setActiveModule(domain);
     setState(prev => ({ ...prev, currentId: nodeId.toString(), lastChoice: null }));
@@ -109,10 +102,10 @@ export const useTestEngine = ({
     requestAnimationFrame(() => {
       nodeStartTime.current = performance.now();
     });
-  }, [isDemo, history.length, setActiveModule, setView]);
+  }, [isDemo, setActiveModule, setView]);
 
   const advanceNode = useCallback((nextNodes: number[]) => {
-    const nextId = Math.max(...nextNodes) + 1;
+    const nextId = Math.max(...nextNodes, -1) + 1;
     if (nextId >= TOTAL_NODES) { setView('results'); return; }
     if (isDemo && nextId >= 3) { setView('dashboard'); return; }
 
@@ -134,7 +127,8 @@ export const useTestEngine = ({
   }, [isDemo, setView, startNode]);
 
   const syncBodySensation = useCallback((sensation: string) => {
-    if (!state.lastChoice || !activeModule || lastSelectedNode === null) return;
+    if (isProcessing || !state.lastChoice || !activeModule || lastSelectedNode === null) return;
+    setIsProcessing(true);
 
     const newItem: GameHistoryItem = { 
       beliefKey: state.lastChoice.beliefKey, 
@@ -145,20 +139,28 @@ export const useTestEngine = ({
       choicePosition: state.lastChoice.position
     };
     
-    const updatedNodes = commitUpdate(newItem, lastSelectedNode);
+    commitUpdate(newItem, lastSelectedNode);
 
     if (sensation === 's0') {
-         advanceNode(updatedNodes);
+         setCompletedNodeIds(nodes => {
+             advanceNode(nodes);
+             return nodes;
+         });
     } else {
         setView('reflection');
         if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
         syncTimerRef.current = setTimeout(() => {
-           advanceNode(updatedNodes);
+           setCompletedNodeIds(nodes => {
+               advanceNode(nodes);
+               return nodes;
+           });
         }, 1200);
     }
-  }, [state.lastChoice, activeModule, lastSelectedNode, advanceNode, setView, state.currentId, commitUpdate]);
+  }, [state, isProcessing, activeModule, lastSelectedNode, advanceNode, setView, commitUpdate, setCompletedNodeIds]);
 
   const handleChoice = useCallback((choice: Choice) => {
+    if (isProcessing) return; 
+    
     window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.(); 
     const now = performance.now();
     
@@ -173,49 +175,35 @@ export const useTestEngine = ({
         const shouldSample = numericId < ONBOARDING_NODES_COUNT || currentScene.intensity >= 4;
 
         setState(prev => ({ ...prev, lastChoice: choiceWithLatency }));
-        if (shouldSample) setView('body_sync');
-        else {
+        StorageService.save('genesis_recovery_choice', choiceWithLatency);
+
+        if (shouldSample) {
+            setView('body_sync');
+        } else {
+             setIsProcessing(true);
              const newItem: GameHistoryItem = { 
-                 beliefKey: choice.beliefKey, 
-                 sensation: 's0', 
-                 latency: cleanLatency,
-                 nodeId: state.currentId,
-                 domain: activeModule as DomainType,
+                 beliefKey: choice.beliefKey, sensation: 's0', latency: cleanLatency,
+                 nodeId: state.currentId, domain: activeModule as DomainType,
                  choicePosition: choice.position
              };
-             const updatedNodes = commitUpdate(newItem, lastSelectedNode);
-             advanceNode(updatedNodes);
+             commitUpdate(newItem, lastSelectedNode);
+             setCompletedNodeIds(nodes => {
+                 advanceNode(nodes);
+                 return nodes;
+             });
         }
     }
-  }, [activeModule, state.currentId, lastSelectedNode, advanceNode, setView, commitUpdate]);
+  }, [isProcessing, activeModule, state, lastSelectedNode, advanceNode, setView, commitUpdate, setCompletedNodeIds]);
 
   const forceCompleteAll = useCallback(() => {
     const allIds = Array.from({ length: TOTAL_NODES }, (_, i) => i);
-    
-    const neutralHistory: GameHistoryItem[] = allIds.map(id => {
-        let domain: DomainType = 'foundation';
-        for (const d of DOMAIN_SETTINGS) {
-            if (id >= d.startId && id < (d.startId + d.count)) {
-                domain = d.key;
-                break;
-            }
-        }
-        return {
-            beliefKey: 'default',
-            sensation: 's0',
-            latency: 1500, // Neutral latency baseline
-            nodeId: id.toString(),
-            domain: domain,
-            choicePosition: -1 // Skipped
-        };
-    });
-
-    setHistory(neutralHistory);
-    setCompletedNodeIds(allIds);
-    const sessionState: SessionState = { nodes: allIds, history: neutralHistory };
-    StorageService.save(STORAGE_KEYS.SESSION_STATE, sessionState);
-    
+    const neutralHistory: GameHistoryItem[] = allIds.map(id => ({
+        beliefKey: 'default', sensation: 's0', latency: 1500, nodeId: id.toString(), domain: 'foundation' as DomainType, choicePosition: -1
+    }));
+    setHistory(() => neutralHistory);
+    setCompletedNodeIds(() => allIds);
+    StorageService.save(STORAGE_KEYS.SESSION_STATE, { nodes: allIds, history: neutralHistory });
   }, [setHistory, setCompletedNodeIds]);
 
-  return { state, setHistory, startNode, handleChoice, syncBodySensation, forceCompleteAll };
+  return { state, startNode, handleChoice, syncBodySensation, forceCompleteAll };
 };

@@ -1,13 +1,15 @@
 
 import React, { memo } from 'react';
-import { ScanHistory } from '../types';
+import { ScanHistory, Translations } from '../types';
+import { translations } from '../translations';
 
 interface EvolutionDashboardProps {
   history: ScanHistory | null;
+  lang: 'ru' | 'ka';
 }
 
 const Sparkline = ({ data, color, height = 40 }: { data: number[], color: string, height?: number }) => {
-  if (data.length < 2) return <div className="h-[40px] flex items-center bg-slate-900/20 rounded-lg px-3"><span className="text-[8px] text-slate-500 font-mono uppercase tracking-widest animate-pulse">Awaiting data for trend...</span></div>;
+  if (data.length < 2) return <div className="h-[40px] flex items-center bg-slate-900/20 rounded-lg px-3"><span className="text-[8px] text-slate-500 font-mono uppercase tracking-widest animate-pulse">...</span></div>;
   
   const width = 200;
   const padding = 5;
@@ -40,7 +42,8 @@ const Sparkline = ({ data, color, height = 40 }: { data: number[], color: string
   );
 };
 
-export const EvolutionDashboard: React.FC<EvolutionDashboardProps> = memo(({ history }) => {
+export const EvolutionDashboard: React.FC<EvolutionDashboardProps> = memo(({ history, lang }) => {
+  const t = translations[lang];
   const hasHistory = history && history.scans.length > 0;
   const scansCount = history?.scans.length || 0;
 
@@ -49,22 +52,42 @@ export const EvolutionDashboard: React.FC<EvolutionDashboardProps> = memo(({ his
       <div className="absolute top-0 right-0 p-4 opacity-5 text-4xl">📈</div>
       
       <div className="flex justify-between items-center relative z-10">
-         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">System Evolution</h3>
-         <span className="text-[9px] font-mono text-slate-500 font-bold">{scansCount} SESSIONS SECURED</span>
+         <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 italic">{t.ui.evolution_title}</h3>
+         <span className="text-[9px] font-mono text-slate-500 font-bold">{scansCount} {t.ui.sessions_secured}</span>
       </div>
 
       {!hasHistory ? (
-          <div className="py-4 space-y-3">
+          <div className="py-4 space-y-3 relative z-10">
               <div className="h-2 bg-white/5 rounded-full w-full"></div>
               <div className="h-2 bg-white/5 rounded-full w-2/3"></div>
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pt-2">Complete your first investigation to enable longitudinal tracking.</p>
+              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pt-2">{t.ui.first_investigation_hint}</p>
           </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-6 relative z-10">
+        <div className="grid grid-cols-1 gap-6 relative z-10">
              <div className="space-y-3">
                 <div className="flex justify-between text-[9px] font-black uppercase text-slate-400 tracking-widest">
-                    <span>Integrity Drift</span>
-                    <span className="text-emerald-400 font-mono">RESOLVING...</span>
+                    <span>{t.ui.integrity_drift}</span>
+                    <span className="text-emerald-400 font-mono">OK</span>
                 </div>
-                
+                <Sparkline data={history.evolutionMetrics.integrityTrend} color="#10b981" />
+             </div>
+
+             <div className="space-y-3">
+                <div className="flex justify-between text-[9px] font-black uppercase text-slate-400 tracking-widest">
+                    <span>{t.ui.noise_tracking}</span>
+                    <span className="text-red-400 font-mono">TRACKING</span>
+                </div>
+                <Sparkline data={history.evolutionMetrics.entropyTrend} color="#f43f5e" />
+             </div>
+
+             <div className="pt-2 border-t border-white/5">
+                <p className="text-[9px] text-slate-500 leading-relaxed italic">
+                    {(history.evolutionMetrics.integrityTrend[history.evolutionMetrics.integrityTrend.length-1] > 70) ? t.ui.evolution_insight_optimizing : t.ui.evolution_insight_stabilizing}. 
+                    {t.ui.evolution_insight_desc}
+                </p>
+             </div>
+        </div>
+      )}
+    </section>
+  );
+});

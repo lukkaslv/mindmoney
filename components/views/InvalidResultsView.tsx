@@ -23,6 +23,8 @@ export const InvalidResultsView: React.FC<InvalidResultsViewProps> = ({ t, onRes
       reason = content.reason_robotic;
   } else if (patternFlags.isSomaticMonotony) {
       reason = content.reason_somatic;
+  } else if (patternFlags.isEarlyTermination) {
+      reason = content.reason_early_termination;
   }
 
 
